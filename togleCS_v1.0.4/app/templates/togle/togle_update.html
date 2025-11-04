@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>문의내역 업데이트 필터</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/togle/togle_update.css') }}">
+</head>
+
+<body>
+    {% extends "layout/loading_layout.html" %}
+    {% block content %}
+
+    <div class="page-container">
+        <!-- 상단 제목/로고 -->
+        <div class="section-title" style="margin-top: 80px;">
+            <a href="{{ url_for('index.index') }}">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="로고" class="logo" />
+            </a>
+            <h1>문의내역 업데이트</h1>
+            <p class="subtitle">필터를 설정해 togle 데이터를 업데이트하세요</p>
+        </div>
+
+        <!-- 필터 카드 -->
+        <form action="{{ url_for('togle.all_update') }}" method="POST" class="filter-card">
+            <!-- 줄1: 쇼핑몰, 문의유형, 날짜 -->
+            <div class="form-line">
+                <select name="mall" required>
+                    <option value="전체">전체</option>
+                    <option value="바이즐(이젠몰)||logo-BUYZLE">바이즐(이젠몰)</option>
+                    <option value="네이버페이||logo-MANUAL">네이버페이</option>
+                    <option value="이젠오토몰||logo-AUCTION">이젠오토몰</option>
+                    <option value="이젠오토몰||logo-GMARKET">이젠오토몰</option>
+                    <option value="이젠오토몰||logo-LOTTE_ON">이젠오토몰</option>
+                    <option value="카페24B2C몰(이젠오토몰)||logo-MANUAL">카페24B2C몰(이젠오토몰)</option>
+                    <option value="이젠오토몰||logo-COUPANG">이젠오토몰</option>
+                    <option value="스스_이젠오토몰||logo-SMART_STORE">스스_이젠오토몰</option>
+                    <option value="위핑(이젠몰)||logo-MANUAL">위핑(이젠몰)</option>
+                    <option value="이젠커머스||logo-AUCTION">이젠커머스</option>
+                    <option value="이젠커머스||logo-GMARKET">이젠커머스</option>
+                    <option value="ESM||logo-MANUAL">ESM</option>
+                    <option value="도매꾹||logo-MANUAL">도매꾹</option>
+                    <option value="바이이즈||logo-MANUAL">바이이즈</option>
+                    <option value="0 스마트스토어엑셀화일(수작업)||logo-MANUAL">0 스마트스토어엑셀화일(수작업)</option>
+                    <option value="엑셀화일B2B||logo-MANUAL">엑셀화일B2B</option>
+                    <option value="지에스샵||logo-MANUAL">지에스샵</option>
+                    <option value="케이셀러||logo-MANUAL">케이셀러</option>
+                    <option value="0 스마트스토어(수작업)||logo-MANUAL">0 스마트스토어(수작업)</option>
+                    <option value="톡스토어||logo-KAKAOTALK_STORE">톡스토어</option>
+                    <option value="멸치쇼핑||logo-MANUAL">멸치쇼핑</option>
+                    <option value="카페24B2B||logo-MANUAL">카페24B2B</option>
+                    <option value="토글 B2B 위탁판매몰||logo-MANUAL">토글 B2B 위탁판매몰</option>
+                    <option value="위메프2.0||logo-WEMAKEPRICE">위메프2.0</option>
+                    <option value="이젠몰||logo-LOTTE_ON">이젠몰</option>
+                    <option value="고도몰_이젠몰||logo-GODO5">고도몰_이젠몰</option>
+                    <option value="이젠몰||logo-SSG_OPENMARKET">이젠몰</option>
+                    <option value="이젠몰||logo-MANUAL">이젠몰</option>
+                    <option value="이젠커머스||logo-COUPANG">이젠커머스</option>
+                    <option value="이젠몰||logo-INTERPARK">이젠몰</option>
+                    <option value="이젠몰_플루이드필름||logo-ELEVEN">이젠몰_플루이드필름</option>
+                    <option value="이젠몰||logo-SMART_STORE">이젠몰</option>
+                </select>
+
+                <select name="q_type">
+                    <option value="전체">전체</option>
+                    <option value="주문문의">주문문의</option>
+                    <option value="상품문의">상품문의</option>
+                    <option value="쇼핑몰문의">쇼핑몰문의</option>
+                </select>
+
+                <input type="date" name="start_date" value="2025-01-01" required />
+                <span class="range-separator">~</span>
+                <input type="date" name="end_date" value="{{ today }}" required />
+            </div>
+
+            <!-- 줄2: 라디오 & 체크 -->
+            <div class="form-line">
+                <label class="radio-option">
+                    <input type="radio" name="answer_filter" value="전체" checked>
+                    전체 문의
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="answer_filter" value="미답변문의">
+                    미답변 문의
+                </label>
+
+                <label class="checkbox-option">
+                    <input type="hidden" name="include_deleted" id="include_deleted_hidden" value="false">
+                    <input type="checkbox" id="include_deleted_checkbox" checked>
+                    삭제된 문의 포함
+                </label>
+            </div>
+
+            <!-- 줄3: 검색어 & 전송 -->
+            <div class="form-line">
+                <input type="text" name="query" placeholder="문의내용을 입력하세요" />
+                <button type="submit" class="submit-btn">📤 최종 전송</button>
+            </div>
+
+            <!-- 줄4: 날짜 버튼 -->
+            <div class="quick-range-buttons">
+                <button type="button" onclick="setDateRange(0)">오늘</button>
+                <button type="button" onclick="setDateRange(3)">3일</button>
+                <button type="button" onclick="setDateRange(7)">1주일</button>
+                <button type="button" onclick="setDateRange(30)">1개월</button>
+                <button type="button" onclick="setDateRange(90)">3개월</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function setDateRange(pastDays) {
+            const today = new Date();
+            const endDate = today.toISOString().split('T')[0];
+            const pastDate = new Date();
+            pastDate.setDate(today.getDate() - pastDays);
+            const startDate = pastDate.toISOString().split('T')[0];
+
+            document.querySelector('input[name="start_date"]').value = startDate;
+            document.querySelector('input[name="end_date"]').value = endDate;
+        }
+
+        document.querySelector("form").addEventListener("submit", function () {
+            const cb = document.getElementById("include_deleted_checkbox");
+            const hidden = document.getElementById("include_deleted_hidden");
+            hidden.value = cb.checked ? "true" : "false";
+        });
+    </script>
+
+    {% endblock %}
+</body>
+
+</html>

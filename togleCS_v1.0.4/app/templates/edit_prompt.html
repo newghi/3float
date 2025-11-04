@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>노트북LM 프롬프트 편집</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/edit_prompt.css') }}" />
+</head>
+
+<body>
+    {% extends "layout/loading_layout.html" %}
+    {% block content %}
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <script>
+        alert("{{ messages[0] }}");
+    </script>
+    {% endif %}
+    {% endwith %}
+
+    <div class="wrapper">
+        <div class="logo-box">
+            <a href="{{ url_for('index.index') }}">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="로고" class="logo" />
+            </a>
+        </div>
+
+        <h1 class="main-title">NotebookLM 프롬프트 편집</h1>
+
+        <form id="prompt-form" method="POST" action="{{ url_for('index.save_prompt') }}">
+            <textarea id="prompt_text" name="prompt_text" class="prompt-editor">{{ prompt_text }}</textarea>
+            <div class="btn-wrap">
+                <button type="submit" class="main-btn">💾 저장하기</button>
+            </div>
+        </form>
+    </div>
+    {% endblock %}
+
+    <script>
+        document.getElementById("prompt-form").addEventListener("submit", () => {
+            const val = document.getElementById("prompt_text").value;
+            console.log("====== 제출 전 ======");
+            console.log(val);
+        });
+    </script>
+
+</body>
+
+</html>

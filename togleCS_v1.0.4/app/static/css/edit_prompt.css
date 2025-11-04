@@ -1,0 +1,53 @@
+.wrapper {
+  text-align: center;
+  padding: 60px 20px;
+}
+.logo {
+  height: 50px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.main-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  color: #222;
+}
+
+.prompt-editor {
+  width: 100%;
+  max-width: 1200px;
+  height: 700px;
+  font-size: 20px; /* 글자 크게 */
+  line-height: 1.6;
+  padding: 20px;
+  resize: vertical;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
+}
+
+.btn-wrap {
+  margin-top: 30px;
+}
+
+/* 기존 버튼 디자인 */
+.main-btn {
+  width: 160px;
+  height: 48px;
+  background: white;
+  border: 2px solid #09ff00;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.main-btn:hover {
+  background: #f4f4f4;
+  transform: translateY(-1px);
+}

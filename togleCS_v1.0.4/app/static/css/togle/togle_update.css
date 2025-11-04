@@ -1,0 +1,140 @@
+/* 전체 페이지 스타일 */
+body {
+  background-color: #f5f7fa;
+  font-family: 'Noto Sans KR', sans-serif;
+  margin: 0;
+  padding: 40px;
+}
+
+/* 로고 + 제목 + 설명 박스 */
+.page-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.logo {
+    height: 50px;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+.section-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.title-logo {
+  height: 48px;
+  margin-bottom: 12px;
+}
+
+.section-title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #222;
+  margin: 0;
+}
+
+.section-title .subtitle {
+  font-size: 15px;
+  color: #666;
+  margin-top: 8px;
+}
+
+/* 카드 박스 */
+.filter-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 입력 필드 줄 정렬 */
+.form-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.form-line select,
+.form-line input[type="date"],
+.form-line input[type="text"] {
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+  flex-shrink: 0;
+}
+
+.form-line input[type="text"] {
+  flex: 1;
+  min-width: 220px;
+}
+
+.range-separator {
+  font-weight: bold;
+  color: #444;
+  padding: 0 6px;
+}
+
+/* 라디오/체크박스 */
+.radio-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.radio-option,
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 6px;
+}
+
+/* 전송 버튼 */
+.submit-btn {
+  background-color: #d64545;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submit-btn:hover {
+  background-color: #b93636;
+}
+
+/* 날짜 퀵 버튼 */
+.quick-range-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-range-buttons button {
+  background-color: #f0f1f3;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.quick-range-buttons button:hover {
+  background-color: #dadde0;
+}

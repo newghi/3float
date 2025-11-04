@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}togleCS{% endblock %}</title>
+  {% block head %}{% endblock %}
+
+  <style>
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.6);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #7c41f8;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .shutdown-form {
+      position: fixed;
+      top: 20px;
+      right: 200px;
+      z-index: 10000;
+    }
+
+    .shutdown-btn {
+      background: #ff4d4f;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s ease;
+    }
+
+    .shutdown-btn:hover {
+      background: #d9363e;
+    }
+  </style>
+</head>
+
+<body>
+  {% block content %}{% endblock %}
+
+  <!-- ✅ 로딩 오버레이 -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- ✅ 종료 버튼 -->
+  <form action="/shutdown" method="post" class="shutdown-form" onsubmit="return confirm('정말 종료하시겠습니까?');">
+    <button class="shutdown-btn" type="submit">⛔ 종료</button>
+  </form>
+
+  <!-- ✅ 공통 로딩 제어 JS -->
+  <script>
+    function showLoading() {
+      document.getElementById("loading-overlay").style.display = "flex";
+    }
+
+    function hideLoading() {
+      document.getElementById("loading-overlay").style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll("form").forEach(form => {
+        form.addEventListener("submit", () => {
+          showLoading();
+        });
+      });
+    });
+
+    // 뒤로가기 시 로딩 강제 종료
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted || (performance.navigation.type === 2)) {
+        hideLoading();
+      }
+    });
+
+  </script>
+
+  {% block script %}{% endblock %}
+</body>
+
+</html>
