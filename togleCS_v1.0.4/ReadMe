@@ -1,22 +1,16 @@
-# 프로젝트 이름
+# togleCS_v1.0.4
 
-간단한 한줄 요약 (이 프로젝트가 무엇을 하는지 설명)
+## 프로젝트 개요
+togleCS_v1.0.4는 [프로젝트 목적이나 주요 기능 간단히 작성]을 위한 Python 기반 애플리케이션입니다.
 
----
+## 주요 기능
+- PDF 자동 업로드 및 관리
+- 웹 자동화 (Selenium 활용)
+- 사용자 인터페이스 제공 (Flask 혹은 기타)
 
-## 📘 개요 (Introduction)
-프로젝트의 목적과 배경을 간략히 설명합니다.  
-왜 만들었는지, 어떤 문제를 해결하는지 적어주세요.
-
-## 🚀 기능 (Features)
-- 주요 기능 1
-- 주요 기능 2
-- 주요 기능 3
-
-## 🛠️ 설치 (Installation)
-```bash
-git clone https://github.com/사용자명/프로젝트명.
-
-
-# 기타사항 
-크롬 버전 114 버전에서 동작하도록 셀레늄 라이브러리 버전이 맞춰져있습니다.
+## 설치 방법
+1. Python 3.8 이상 설치  
+2. 가상환경 생성 및 활성화  
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
