@@ -29,6 +29,11 @@ def index():
     # 내부 IP면 기존 index.html
     return render_template('index.html', user=current_user)
 
+@index_bp.route('/external-view', methods=['GET'])
+@login_required
+def proto_index():
+    # 외부 페이지인 external_view.html을 내부에서도 접근할 수 있도록 함
+    return render_template('external_view.html', user=current_user)
 
 # 프롬프트 편집 페이지
 @index_bp.route('/edit_prompt', methods=['GET'])
