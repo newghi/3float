@@ -207,20 +207,40 @@ def post_unanswered():
 from flask_login import login_required, current_user
 from flask import request
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 현재 파일 위치
+LOG_DIR = os.path.join(BASE_DIR, "logs")  # logs 폴더 생성
+IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
+
 @togle_bp.route('/external', methods=['GET'])
 def external_view():
-    # ✅ 디버깅용 출력
+    # 디버깅용 출력
     print(f"현재 사용자: {current_user}")
     print(f"로그인 여부: {current_user.is_authenticated}")
     print(f"요청 IP: {request.remote_addr}")
-    
-    # 로그인 안되어있으면 수동 리다이렉트
+
     if not current_user.is_authenticated:
         print("❌ 로그인 안됨 → auth.login으로 리다이렉트")
         flash('로그인이 필요합니다.', 'warning')
         return redirect(url_for('auth.login'))
-    
-    print("✅ 로그인됨 → 페이지 표시")
+
+    # ✅ 로그인됨 → IP 기록
+    now = datetime.now()
+    year_month = now.strftime("%Y.%m")  # 파일명: 2025.11.txt
+    log_file_path = os.path.join(LOG_DIR, f"{year_month}.txt")
+
+    # 로그 디렉토리 없으면 생성
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+    # 기록 내용: yyyy.mm.dd HH:MM:SS - IP - 사용자ID
+    log_entry = f"{now.strftime('%Y.%m.%d %H:%M:%S')} - {request.remote_addr} - {current_user.username}\n"
+
+    try:
+        with open(log_file_path, "a", encoding="utf-8") as f:
+            f.write(log_entry)
+        print(f"✅ IP 기록 완료: {log_file_path}")
+    except Exception as e:
+        print(f"❌ IP 기록 실패: {e}")
+
     return render_template('external_view.html', user=current_user)
 
 

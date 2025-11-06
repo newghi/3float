@@ -34,10 +34,9 @@ def create_initial_users():
         
         # 새 사용자 생성
         users_to_create = [
-            ('admin', 'admin123', '관리자'),
-            ('external', 'external2025', '외부 접속용'),
-            ('user1', 'user1234', '일반 사용자'),
-        ]
+            ('egenSecurity20250926', '123456789', '관리자'),
+            ('egenauto', '0000', '외부 접속용')
+            ]
         
         print("=" * 60)
         print("사용자 계정 생성 중...")
@@ -68,8 +67,6 @@ def create_initial_users():
             
             print("\n🔒 보안을 위해 운영 환경에서는 비밀번호를 변경하세요!")
             print("\n🌐 외부 접속 URL:")
-            print("   http://서버IP:5005/auth/login")
-            print("   ID: external / PW: external2025")
             
         except Exception as e:
             db.session.rollback()

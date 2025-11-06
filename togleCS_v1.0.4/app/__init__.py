@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, session, flash, redirect, url_for
 from flask_session import Session
 from flask_cors import CORS
 from datetime import datetime, timedelta
@@ -8,14 +8,22 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 from apscheduler.schedulers import SchedulerNotRunningError
 import logging
 import atexit
-from flask_login import LoginManager
+from flask_login import LoginManager, logout_user, current_user
+import uuid
+import os
+from flask import request, abort
 
 # ✅ db는 models에서 import
 from app.models import db
 
+# 로그/블락 파일 경로
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
+os.makedirs(LOG_DIR, exist_ok=True)
+
 login_manager = LoginManager()
 unanswered_data = []  # 기존 코드 호환용
-
 
 def create_app():
     """Flask 앱 생성 및 초기화"""
@@ -30,6 +38,7 @@ def create_app():
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = "./flask_session"
     app.config["SESSION_PERMANENT"] = True
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = False
     app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=10)
     Session(app)
     print("✅ Flask-Session 설정 완료")
@@ -39,13 +48,7 @@ def create_app():
     print("✅ Config 등록 완료")
     
     # ✅ CORS 설정 (외부 접속 허용)
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": "*",
-            "methods": ["GET", "POST", "PUT", "DELETE"],
-            "allow_headers": ["Content-Type"]
-        }
-    }, supports_credentials=True)  # ✅ 쿠키/세션 지원
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
     print("✅ CORS 설정 완료")
     
     # ✅ DB 설정
@@ -58,7 +61,47 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     print("✅ Flask-Login 초기화 완료")
+    
+    # 블락된 IP 목록 로드
+    def load_blocked_ips():
+        blocked = set()
+        if os.path.exists(IP_BLOCK_FILE):
+            with open(IP_BLOCK_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        # 파일 형식: yyyy.mm.dd HH:MM:SS - IP - 사용자ID
+                        parts = line.split(" - ")
+                        if len(parts) >= 2:
+                            blocked.add(parts[1])
+        return blocked
+    blocked_ips = load_blocked_ips()
 
+    # 모든 요청 전에 IP 체크
+    @app.before_request
+    def block_ips():
+        ip = request.remote_addr
+        if ip in blocked_ips:
+            print(f"❌ 차단된 IP 요청: {ip}")
+            abort(403, description="접속이 차단된 IP입니다.")
+
+    # 기존 세션 검사 훅과 병합 가능
+    @app.before_request
+    def session_uid_check():
+        if current_user.is_authenticated:
+            now_ts = datetime.now().timestamp()
+            if 'session_uid' not in session:
+                session['session_uid'] = str(uuid.uuid4())
+                session['last_checked'] = now_ts
+            else:
+                last_checked = session.get('last_checked', now_ts)
+                if now_ts - last_checked > 10*60:  # 10분 초과 시
+                    logout_user()
+                    session.clear()
+                    flash("세션이 만료되어 로그아웃되었습니다.", "warning")
+                    return redirect(url_for('auth.login'))
+                session['last_checked'] = now_ts
+                
     # Blueprint 등록
     from app.routes.index import index_bp
     from app.routes.togle import togle_bp
