@@ -7,10 +7,26 @@ import os, threading, signal, sys
 index_bp = Blueprint('index', __name__)
 
 from flask_login import login_required, current_user
+from ipaddress import ip_address
+
+def is_private_ip(ip):
+    """사설망 IP인지 확인"""
+    try:
+        return ip_address(ip).is_private
+    except ValueError:
+        return False
 
 @index_bp.route('/', methods=['GET'])
-@login_required  # ✅ 로그인 체크
+@login_required
 def index():
+    ip = request.remote_addr
+
+    # 외부 IP면 external_view.html
+    if not is_private_ip(ip):
+        # 필요하면 로그 기록도 여기서 추가 가능
+        return render_template('external_view.html', user=current_user)
+
+    # 내부 IP면 기존 index.html
     return render_template('index.html', user=current_user)
 
 
