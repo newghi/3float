@@ -16,9 +16,9 @@ from flask import request, abort
 # ✅ db는 models에서 import
 from app.models import db
 
-# 로그/블락 파일 경로
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+# 프로젝트 최상위 폴더 기준
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # app 폴더의 상위 폴더
+LOG_DIR = os.path.join(PROJECT_ROOT, "logs")  # 프로젝트 루트/logs
 IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
 os.makedirs(LOG_DIR, exist_ok=True)
 
