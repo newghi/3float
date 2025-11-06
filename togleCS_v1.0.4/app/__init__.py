@@ -8,7 +8,11 @@ from apscheduler.schedulers import SchedulerNotRunningError
 import logging
 import atexit
 import requests
+from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
 
+db = SQLAlchemy()    
+login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
@@ -23,17 +27,24 @@ def create_app():
 
     # config 등록
     app.config.from_object(config)
+    
+    # Flask-Login 초기화
+    db.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"  # 로그인 페이지로 리다이렉트될 이름 (밑에서 블루프린트 등록 예정)
 
     # Blueprint 등록
     from app.routes.index import index_bp
     from app.routes.togle import togle_bp
     from app.routes.review import review_bp
     from app.routes.talktalk import talktalk_bp
+    from app.routes.auth import auth_bp  # 새 로그인 블루프린트
 
     app.register_blueprint(index_bp)
     app.register_blueprint(togle_bp, url_prefix="/togle")
     app.register_blueprint(review_bp, url_prefix="/review")
     app.register_blueprint(talktalk_bp, url_prefix="/talktalk")
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     # APScheduler 설정
     scheduler = start_scheduler()
@@ -43,7 +54,12 @@ def create_app():
     atexit.register(lambda: safe_shutdown_scheduler(app.scheduler))
 
     return app
+ 
+from app.models.user_model import User
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # 🧹 안전한 스케줄러 종료
 def safe_shutdown_scheduler(scheduler):

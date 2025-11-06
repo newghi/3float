@@ -615,3 +615,41 @@ def upload_togle_answer(answers):
     driver.quit()
     return unmatched_questions
 
+from app.drivers.chromedriver import set_chromedriver
+from selenium.webdriver.common.by import By
+from app.services.togleService import togle_macro  # 로그인 매크로
+import time
+import os
+
+def send_reply_selenium(title, content):
+    driver = None
+    try:
+        driver = set_chromedriver()
+        togle_macro(driver)  # 로그인 수행
+
+        # 서버 저장 프롬프트 읽기
+        prompt_text = ""
+        prompt_path = os.path.join(os.getcwd(), "prompt.txt")
+        if os.path.exists(prompt_path):
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                prompt_text = f.read()
+
+        # 미답변 글 첫 번째 클릭
+        driver.find_element(By.XPATH, "//div[@role='row']").click()
+        time.sleep(1)
+
+        # 제목/내용 입력
+        driver.find_element(By.XPATH, "//input[@placeholder='답변제목']").send_keys(title)
+        # 기존 프롬프트와 작성 내용을 합쳐서 입력
+        driver.find_element(By.XPATH, "//textarea[@placeholder='답변내용']").send_keys(prompt_text + "\n" + content)
+
+        # 전송 버튼 클릭
+        driver.find_element(By.XPATH, "//button[@id='send_reply']").click()
+        print("✅ 답변 전송 완료")
+
+    except Exception as e:
+        print(f"❌ Selenium 오류: {e}")
+
+    finally:
+        if driver:
+            driver.quit()
