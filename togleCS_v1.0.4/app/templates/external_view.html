@@ -60,7 +60,7 @@
         <div id="content" class="loading">로딩 중...</div>
     </div>
 
-    <script>
+    <!-- <script>
         // ⚙️ 서버 URL 설정 (실제 서버 IP로 변경)
         const SERVER_URL = 'http://220.120.14.112:5005';
         
@@ -296,9 +296,9 @@
                 setTimeout(() => msgDiv.innerHTML = '', 5000);
             }
         }
-    </script>
-    <!-- <script>
-    // ⚙️ 임시 테스트용 데이터
+    </script> -->
+<script>
+    // ⚙️ 테스트용 데이터
     let inquiries = [
         {
             id: 1,
@@ -309,101 +309,83 @@
             q_question: "상품 언제 배송되나요?",
             q_answer_title: "",
             q_answer_content: ""
+        },
+        {
+            id: 2,
+            q_shopping_mall: "샘플몰",
+            q_type: "교환 문의",
+            q_writer: "김철수",
+            q_date: "2025-11-05",
+            q_question: "상품 교환 가능할까요?",
+            q_answer_title: "",
+            q_answer_content: ""
         }
     ];
 
-    // 페이지 로드 시 자동 실행
-    window.onload = () => {
-        renderInquiries();
-    };
+    window.onload = () => renderInquiries();
 
-    // 화면에 문의 목록 표시
     function renderInquiries() {
         const content = document.getElementById('content');
-        
         if (inquiries.length === 0) {
             content.innerHTML = '<div class="empty">📭 미답변 문의가 없습니다.</div>';
             return;
         }
-        
-        content.innerHTML = `
-            <div class="inquiry-list">
-                ${inquiries.map((item, idx) => `
-                    <div class="inquiry-item" data-id="${item.id}">
-                        <div class="inquiry-header">
-                            <div class="inquiry-meta">
-                                <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall}</span>
-                                <span><strong>유형:</strong> ${item.q_type}</span>
-                                <span><strong>작성자:</strong> ${item.q_writer}</span>
-                                <span><strong>날짜:</strong> ${item.q_date}</span>
-                            </div>
-                            <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
-                                ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
-                            </span>
-                        </div>
-                        
-                        <div class="inquiry-question">
-                            <strong>📝 질문:</strong><br>
-                            ${item.q_question}
-                        </div>
-                        
-                        <div class="inquiry-answer">
-                            <div class="form-group">
-                                <label for="title-${item.id}">답변 제목</label>
-                                <input type="text" id="title-${item.id}" value="${item.q_answer_title || ''}" 
-                                       placeholder="답변 제목을 입력하세요">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="content-${item.id}">답변 내용</label>
-                                <textarea id="content-${item.id}" placeholder="답변 내용을 입력하세요">${item.q_answer_content || ''}</textarea>
-                            </div>
-                            
-                            <button class="btn-secondary" onclick="saveOne(${item.id})">💾 이 답변만 저장</button>
-                        </div>
-                    </div>
-                `).join('')}
+
+        content.innerHTML = inquiries.map(item => `
+            <div class="inquiry-item" data-id="${item.id}">
+                <div><strong>${item.q_shopping_mall}</strong> | ${item.q_type} | ${item.q_writer} | ${item.q_date}</div>
+                <div>📝 ${item.q_question}</div>
+                <div>
+                    <input type="text" id="title-${item.id}" value="${item.q_answer_title}" placeholder="답변 제목">
+                    <textarea id="content-${item.id}" placeholder="답변 내용">${item.q_answer_content}</textarea>
+                    <button onclick="saveOne(${item.id})">💾 저장</button>
+                </div>
             </div>
-        `;
+        `).join('');
     }
 
-    // 개별 답변 저장 (임시 동작: 화면에서만 반영)
+    // 개별 저장
     function saveOne(id) {
         const title = document.getElementById(`title-${id}`).value;
         const content = document.getElementById(`content-${id}`).value;
-
-        // 데이터 업데이트
         const inquiry = inquiries.find(i => i.id === id);
         inquiry.q_answer_title = title;
         inquiry.q_answer_content = content;
 
-        showMessage('success', '✅ 저장 완료! (임시 데이터)');
+        showMessage('success', `✅ ${id}번 답변 저장 완료 (테스트용)`);
         renderInquiries();
     }
 
-    // 메시지 표시
-    function showMessage(type, text) {
-        const msgDiv = document.getElementById('message');
-        if (type === 'loading') {
-            msgDiv.innerHTML = `<div class="loading">${text}</div>`;
-        } else {
-            msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
-            setTimeout(() => msgDiv.innerHTML = '', 3000);
-        }
+    // 전체 저장
+    function saveAll() {
+        inquiries.forEach(item => {
+            item.q_answer_title = document.getElementById(`title-${item.id}`).value;
+            item.q_answer_content = document.getElementById(`content-${item.id}`).value;
+        });
+        showMessage('success', `✅ 전체 ${inquiries.length}개 답변 저장 완료 (테스트용)`);
+        renderInquiries();
     }
 
-    // 🚫 전송 버튼 비활성화
-    document.querySelectorAll('.btn-danger').forEach(btn => {
-        btn.onclick = () => alert('⚠️ 테스트 모드: 전송은 막혀 있습니다.');
-    });
+    // 전체 전송 시뮬레이션
+    function submitAll() {
+        if (!confirm("⚠️ 테스트 모드: 실제 전송은 되지 않습니다. 계속하시겠습니까?")) return;
 
-    // 🚀 AI 답변 생성 버튼도 임시 동작
-    document.querySelectorAll('.btn-primary').forEach(btn => {
-        if (btn.innerText.includes('AI 답변 생성')) {
-            btn.onclick = () => alert('⚠️ 테스트 모드: AI 답변 생성은 막혀 있습니다.');
-        }
-    });
-</script> -->
+        const answers = inquiries.map(i => ({
+            q_question: i.q_question,
+            q_answer_title: i.q_answer_title,
+            q_answer_content: i.q_answer_content
+        }));
+
+        console.log("🚀 전송 시뮬레이션:", answers);
+        showMessage('success', `✅ ${answers.length}개 답변 전송 시뮬레이션 완료 (테스트용)`);
+    }
+
+    function showMessage(type, text) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
+        setTimeout(() => msgDiv.innerHTML = '', 3000);
+    }
+</script>
 
 </body>
 </html>
