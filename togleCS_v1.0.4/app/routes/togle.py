@@ -202,3 +202,84 @@ def post_unanswered():
         "fail_list": fail_list
     })
 
+# app/routes/togle.py에 추가할 코드
+
+from flask_login import login_required, current_user
+from flask import request
+
+@togle_bp.route('/external', methods=['GET'])
+def external_view():
+    # ✅ 디버깅용 출력
+    print(f"현재 사용자: {current_user}")
+    print(f"로그인 여부: {current_user.is_authenticated}")
+    print(f"요청 IP: {request.remote_addr}")
+    
+    # 로그인 안되어있으면 수동 리다이렉트
+    if not current_user.is_authenticated:
+        print("❌ 로그인 안됨 → auth.login으로 리다이렉트")
+        flash('로그인이 필요합니다.', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    print("✅ 로그인됨 → 페이지 표시")
+    return render_template('external_view.html', user=current_user)
+
+
+@togle_bp.route('/external/logout', methods=['GET'])
+@login_required
+def external_logout():
+    """로그아웃 (외부 페이지용)"""
+    from flask_login import logout_user
+    logout_user()
+    flash('로그아웃 되었습니다.', 'info')
+    return redirect(url_for('auth.login'))
+
+
+# ✅ 외부에서 프롬프트 편집 페이지
+@togle_bp.route('/external/edit_prompt', methods=['GET'])
+@login_required
+def external_edit_prompt():
+    """외부에서 프롬프트 편집"""
+    from app.utils.paths import get_data_dir
+    import os
+    
+    base_dir = get_data_dir()
+    prompt_path = os.path.join(base_dir, "app", "data", "prompt.txt")
+    
+    if not os.path.exists(prompt_path):
+        with open(prompt_path, 'w', encoding='utf-8') as f:
+            f.write("")
+    
+    with open(prompt_path, 'r', encoding='utf-8') as f:
+        prompt = f.read()
+    
+    return render_template('external_edit_prompt.html', prompt_text=prompt, user=current_user)
+
+
+# ✅ 외부에서 프롬프트 저장
+@togle_bp.route('/external/save_prompt', methods=['POST'])
+@login_required
+def external_save_prompt():
+    """외부에서 프롬프트 저장"""
+    from app.utils.paths import get_data_dir
+    import os, sys
+    
+    new_prompt = request.form.get('prompt_text', '')
+    
+    # 불필요한 빈 줄 제거
+    lines = new_prompt.splitlines()
+    cleaned = '\n'.join([line.rstrip() for line in lines if line.strip() != ''])
+    
+    # 경로 설정
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
+    prompt_path = os.path.abspath(os.path.join(base_dir, "app", "data", "prompt.txt"))
+    
+    # 저장
+    with open(prompt_path, 'w', encoding='utf-8') as f:
+        f.write(cleaned)
+    
+    flash('✅ 프롬프트가 저장되었습니다.', 'success')
+    return redirect(url_for('togle.external_edit_prompt'))

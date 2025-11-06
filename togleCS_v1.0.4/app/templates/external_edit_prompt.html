@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프롬프트 편집 (외부)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { color: #333; }
+        .user-info { color: #666; font-size: 14px; }
+        .nav-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn:hover { opacity: 0.9; }
+        textarea { width: 100%; min-height: 400px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; }
+        .button-group { display: flex; gap: 10px; margin-top: 20px; }
+        .flash { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .flash.success { background: #e8f5e9; color: #2e7d32; }
+        .flash.error { background: #ffebee; color: #c62828; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0277bd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📝 프롬프트 편집</h1>
+                <div class="user-info">로그인: {{ user.username }}</div>
+            </div>
+            <a href="/togle/external/logout" class="btn btn-danger">🚪 로그아웃</a>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/togle/external" class="btn btn-secondary">← 미답변 관리로 돌아가기</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="info-box">
+            ℹ️ 이 프롬프트는 NotebookLM이 답변을 생성할 때 사용됩니다. 수정 후 저장하면 즉시 반영됩니다.
+        </div>
+
+        <form method="POST" action="/togle/external/save_prompt">
+            <textarea name="prompt_text" placeholder="프롬프트를 입력하세요...">{{ prompt_text }}</textarea>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">💾 저장</button>
+                <button type="button" class="btn btn-secondary" onclick="window.location.reload()">🔄 취소</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

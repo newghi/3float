@@ -6,10 +6,13 @@ import os, threading, signal, sys
 
 index_bp = Blueprint('index', __name__)
 
-# 메인화면 페이지
+from flask_login import login_required, current_user
+
 @index_bp.route('/', methods=['GET'])
+@login_required  # ✅ 로그인 체크
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user=current_user)
+
 
 # 프롬프트 편집 페이지
 @index_bp.route('/edit_prompt', methods=['GET'])
@@ -70,3 +73,22 @@ def shutdown():
 
     threading.Thread(target=shutdown_async).start()
     return '서버 종료 중...'
+
+
+from flask import request, redirect, url_for
+from flask_login import current_user
+
+def login_or_internal_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        client_ip = request.remote_addr
+        # 서버 내부 IP 체크
+        internal_ips = ["127.0.0.1", "192.168.0.100"]  # 서버 IP 추가
+        if client_ip in internal_ips:
+            return f(*args, **kwargs)
+        # 외부 IP이면 로그인 체크
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+        return f(*args, **kwargs)
+    return decorated
