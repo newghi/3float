@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash
 from app.models.user_model import User
 from datetime import datetime, timedelta
 import os
+import ipaddress
 
 # 전역 변수 또는 Redis/DB를 사용할 수 있음
 login_attempts = {}  # { "ip주소": {"count": int, "last_attempt": datetime, "blocked_until": datetime} }
@@ -35,13 +36,13 @@ def login():
 
     info = login_attempts[ip]
 
-    # ✅ 영구 차단
+    # 영구 차단
     if info["count"] >= PERMANENT_BAN_THRESHOLD:
         log_permanent_ban(ip)
         flash("해당 IP가 영구 차단되었습니다.", "error")
         return render_template("login.html")
 
-    # ✅ 임시 차단
+    # 임시 차단
     if info["blocked_until"] and now < info["blocked_until"]:
         flash(f"{TEMP_BAN_MINUTES}분 후 다시 시도해주세요.", "error")
         return render_template("login.html")
@@ -63,7 +64,7 @@ def login():
             # 임시 차단 설정
             if info["count"] >= TEMP_BAN_THRESHOLD and info["count"] < PERMANENT_BAN_THRESHOLD:
                 info["blocked_until"] = now + timedelta(minutes=TEMP_BAN_MINUTES)
-                flash(f"5회 이상 로그인 실패, {TEMP_BAN_MINUTES}분 후 다시 시도해주세요.", "error")
+                flash(f"{TEMP_BAN_THRESHOLD}회 이상 로그인 실패, {TEMP_BAN_MINUTES}분 후 다시 시도해주세요.", "error")
             else:
                 flash("아이디 또는 비밀번호가 잘못되었습니다.", "error")
 
@@ -75,9 +76,17 @@ def login():
         info["blocked_until"] = None
         flash(f"환영합니다, {user.username}님!", "success")
 
-        if username == 'external':
-            return redirect(url_for("togle.external_view"))
-        else:
+        # 🔹 사설망 여부 체크
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            if not ip_obj.is_private:
+                # 사설망이 아닌 경우
+                return redirect(url_for("togle.external_view"))
+            else:
+                # 사설망이면 기본 페이지
+                return redirect(url_for("index.index"))
+        except ValueError:
+            # IP 형식 오류 시 기본 페이지
             return redirect(url_for("index.index"))
 
     return render_template("login.html")
