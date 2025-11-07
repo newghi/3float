@@ -445,31 +445,47 @@ def notebookLM_update(filepath):
     # 노트북LM에 접속하기
     notebookLM_login(driver)
 
-    # 'togle_data.pdf' 파일 삭제
-    pdf_div = driver.find_element(By.XPATH, "//div[@style='animation-delay: 0.05s;']")
+    # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
+    try:
+        # 'togle_data.pdf'를 정확히 찾아 삭제
+        pdf_div = driver.find_element(By.XPATH, "//div[normalize-space(text())='togle_data.pdf']")
+        actions = ActionChains(driver)
+        actions.move_to_element(pdf_div).perform()
 
-    actions = ActionChains(driver)
-    actions.move_to_element(pdf_div).perform()
-
-    search_element(driver, By.XPATH, "//div[@style='animation-delay: 0.05s;']//button[@aria-label='더보기']", "click")
-    time.sleep(1)
-    search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")
-    time.sleep(1)
-    search_element(driver, By.XPATH, "//span[normalize-space(text())='삭제']", "click")
-    time.sleep(1)
+        # '더보기' 버튼 클릭
+        search_element(driver, By.XPATH, "//div[normalize-space(text())='togle_data.pdf']//button[@aria-label='더보기']", "click")
+        time.sleep(1)
+        
+        # '소스 삭제' 클릭
+        search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")
+        time.sleep(1)
+        
+        # '삭제' 클릭
+        search_element(driver, By.XPATH, "//span[normalize-space(text())='삭제']", "click")
+        time.sleep(1)
+        print("✅ 'togle_data.pdf' 파일 삭제 완료")
+        
+    except Exception as e:
+        print(f"삭제할 파일을 찾을 수 없습니다: {e}")
 
     # 새로운 'togle_data.pdf' 추가
-    search_element(driver, By.XPATH, "//button[@aria-label='출처 추가']", "click")
-    print("✅ '추가' 버튼 클릭")
+    try:
+        search_element(driver, By.XPATH, "//button[@aria-label='출처 추가']", "click")
+        print("✅ '추가' 버튼 클릭")
 
-    file_button = driver.find_element(By.XPATH, "//button[@aria-label='컴퓨터에서 소스 업로드']")
-    actions.move_to_element(file_button).perform()
+        file_button = driver.find_element(By.XPATH, "//button[@aria-label='컴퓨터에서 소스 업로드']")
+        actions.move_to_element(file_button).perform()
 
-    upload_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
-    upload_input.send_keys(os.path.join(current_app.root_path, "data", "togle_data.pdf"))
-    time.sleep(5)
-    print("✅ 새로운 'togle_data.pdf' 추가 완료")
+        # 'togle_data.pdf' 업로드
+        upload_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
+        upload_input.send_keys(os.path.join(current_app.root_path, "data", "togle_data.pdf"))
+        time.sleep(5)
+        print("✅ 새로운 'togle_data.pdf' 추가 완료")
+    
+    except Exception as e:
+        print(f"파일 추가 과정에서 오류가 발생했습니다: {e}")
 
+    # 드라이버 종료
     driver.quit()
     return None
 
