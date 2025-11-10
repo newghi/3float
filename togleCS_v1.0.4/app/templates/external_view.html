@@ -8,26 +8,53 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-bottom: 10px; }
-        .info { color: #666; margin-bottom: 30px; }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        
+        /* 헤더 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+        .header-left h1 { color: #333; margin-bottom: 5px; }
+        .header-left .info { color: #666; font-size: 14px; }
+        
+        /* 상태 정보 박스 */
+        .status-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .status-item { background: #f9f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; }
+        .status-item.excel { border-left-color: #4CAF50; }
+        .status-item.schedule { border-left-color: #FF9800; }
+        .status-label { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .status-value { font-size: 16px; font-weight: 600; color: #333; }
+        .status-btn { margin-top: 8px; padding: 5px 10px; font-size: 12px; background: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; }
+        .status-btn:hover { background: #d0d0d0; }
+        
+        /* 컨트롤 버튼 그룹 */
+        .control-section { margin-bottom: 25px; }
+        .control-section h3 { font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+        
+        button, .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s; text-decoration: none; display: inline-block; }
         .btn-primary { background: #4CAF50; color: white; }
         .btn-primary:hover { background: #45a049; }
         .btn-secondary { background: #2196F3; color: white; }
         .btn-secondary:hover { background: #0b7dda; }
+        .btn-warning { background: #FF9800; color: white; }
+        .btn-warning:hover { background: #e68900; }
         .btn-danger { background: #f44336; color: white; }
         .btn-danger:hover { background: #da190b; }
+        .btn-link { background: #9C27B0; color: white; }
+        .btn-link:hover { background: #7B1FA2; }
+        .btn-logout { background: #607D8B; color: white; }
+        .btn-logout:hover { background: #546E7A; }
+        
+        /* 문의 목록 */
         .inquiry-list { display: flex; flex-direction: column; gap: 20px; }
         .inquiry-item { border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fafafa; }
         .inquiry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .inquiry-meta { display: flex; gap: 15px; font-size: 13px; color: #666; }
-        .inquiry-question { background: white; padding: 15px; border-left: 4px solid #2196F3; margin-bottom: 15px; }
+        .inquiry-meta { display: flex; gap: 15px; font-size: 13px; color: #666; flex-wrap: wrap; }
+        .inquiry-question { background: white; padding: 15px; border-left: 4px solid #2196F3; margin-bottom: 15px; white-space: pre-wrap; }
         .inquiry-answer { display: grid; gap: 10px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; }
         label { font-weight: 600; color: #333; font-size: 14px; }
         input, textarea { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
         textarea { resize: vertical; min-height: 120px; font-family: inherit; }
+        
         .loading { text-align: center; padding: 40px; color: #666; }
         .error { background: #ffebee; color: #c62828; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .success { background: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
@@ -35,55 +62,217 @@
         .status-badge { padding: 5px 10px; border-radius: 3px; font-size: 12px; font-weight: 600; }
         .status-pending { background: #fff3e0; color: #e65100; }
         .status-modified { background: #e3f2fd; color: #0277bd; }
+        
+        /* 모달 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.active { display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; }
+        .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+        .time-input { display: flex; gap: 10px; align-items: center; }
+        .time-input input { width: 80px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div>
+        <!-- 헤더 -->
+        <div class="header">
+            <div class="header-left">
                 <h1>🔔 미답변 문의 관리</h1>
                 <p class="info">서버에서 수집한 미답변 문의를 확인하고 답변을 수정/전송할 수 있습니다.</p>
             </div>
-            <a href="/togle/external/logout" style="padding: 10px 20px; background: #f44336; color: white; text-decoration: none; border-radius: 5px; font-size: 14px;">🚪 로그아웃</a>
+            <a href="/togle/external/logout" class="btn btn-logout">🚪 로그아웃</a>
         </div>
         
-        <div class="controls">
-            <button class="btn-secondary" onclick="loadUnanswered()">🔄 새로고침</button>
-            <a href="/togle/external/edit_prompt" class="btn btn-secondary" style="display: inline-block; text-align: center;">📝 프롬프트 편집</a>
-            <button class="btn-primary" onclick="generateAllAnswers()">🤖 AI 답변 생성</button>
-            <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
-            <button class="btn-danger" onclick="submitAll()">📤 Togle 전송 (서버 자동)</button>
-            <button class="btn-secondary" onclick="checkStatus()">📊 전송 상태 확인</button>
-            <button id="get_unanswered" class="main-btn">📥 미답변 문의글 가져오기</button>
+        <!-- 상태 정보 -->
+        <div class="status-box">
+            <div class="status-item schedule">
+                <div class="status-label">⏰ 자동 수집 시간</div>
+                <div class="status-value" id="schedule-time">매일 09:00</div>
+                <button class="status-btn" onclick="openScheduleModal()">⚙️ 설정</button>
+            </div>
+            <div class="status-item excel">
+                <div class="status-label">📊 엑셀 데이터 업데이트</div>
+                <div class="status-value" id="excel-update">로딩 중...</div>
+                <button class="status-btn" onclick="downloadExcel()">⬇️ 다운로드</button>
+            </div>
+            <div class="status-item">
+                <div class="status-label">📝 미답변 문의 수</div>
+                <div class="status-value" id="unanswered-count">0개</div>
+            </div>
+        </div>
+        
+        <!-- 시스템 관리 -->
+        <div class="control-section">
+            <h3>🔧 시스템 관리</h3>
+            <div class="controls">
+                <button class="btn-warning" onclick="rebootProgram()">🔄 프로그램 재시작</button>
+                <button class="btn-warning" onclick="fetchUnanswered()">📥 미답변 문의 가져오기</button>
+                <a href="https://www.togle.io/app/inquiry" target="_blank" class="btn btn-link">🔗 Togle 사이트 열기</a>
+            </div>
+        </div>
+        
+        <!-- 프롬프트 및 답변 관리 -->
+        <div class="control-section">
+            <h3>📝 답변 관리</h3>
+            <div class="controls">
+                <button class="btn-secondary" onclick="loadUnanswered()">🔄 새로고침</button>
+                <a href="/togle/external/edit_prompt" class="btn btn-secondary">📝 프롬프트 편집</a>
+                <button class="btn-primary" onclick="generateAllAnswers()">🤖 AI 답변 생성</button>
+                <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
+                <button class="btn-danger" onclick="submitAll()">📤 Togle 전송</button>
+                <button class="btn-secondary" onclick="checkStatus()">📊 전송 상태</button>
+            </div>
         </div>
         
         <div id="message"></div>
         <div id="content" class="loading">로딩 중...</div>
     </div>
 
+    <!-- 스케줄 설정 모달 -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⏰ 자동 수집 시간 설정</div>
+            <div class="modal-body">
+                <div class="time-input">
+                    <label>시간:</label>
+                    <input type="number" id="hour" min="0" max="23" value="9">
+                    <span>:</span>
+                    <input type="number" id="minute" min="0" max="59" value="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeScheduleModal()">취소</button>
+                <button class="btn-primary" onclick="saveSchedule()">저장</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ⚙️ 서버 URL 설정 (실제 서버 IP로 변경)
         const SERVER_URL = 'http://220.120.14.112:5005';
-        
         let inquiries = [];
 
-        // 페이지 로드 시 자동 실행
         window.onload = () => {
             loadUnanswered();
+            loadExcelInfo();
+            loadScheduleInfo();
         };
+
+        // 엑셀 정보 로드
+        async function loadExcelInfo() {
+            try {
+                const res = await fetch(`${SERVER_URL}/api/excel_info`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('excel-update').textContent = data.last_updated || '정보 없음';
+                }
+            } catch (error) {
+                document.getElementById('excel-update').textContent = '로드 실패';
+            }
+        }
+
+        // 스케줄 정보 로드
+        async function loadScheduleInfo() {
+            try {
+                const res = await fetch(`${SERVER_URL}/api/schedule_info`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('schedule-time').textContent = `매일 ${data.hour.toString().padStart(2, '0')}:${data.minute.toString().padStart(2, '0')}`;
+                }
+            } catch (error) {
+                console.error('스케줄 로드 실패:', error);
+            }
+        }
+
+        // 프로그램 업데이트
+        async function rebootProgram() {
+            if (!confirm('프로그램을 업데이트하시겠습니까?\n\n서버가 재시작됩니다.')) return;
+            
+            try {
+                showMessage('loading', '프로그램 업데이트 중...');
+                const res = await fetch(`${SERVER_URL}/api/update_program`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage('success', '✅ 업데이트가 시작되었습니다. 잠시 후 페이지를 새로고침하세요.');
+                    setTimeout(() => window.location.reload(), 10000);
+                } else {
+                    showMessage('error', '❌ 업데이트 실패: ' + data.error);
+                }
+            } catch (error) {
+                showMessage('error', '❌ 업데이트 실패: ' + error.message);
+            }
+        }
+
+        // 미답변 문의 가져오기
+        async function fetchUnanswered() {
+            if (!confirm('서버에서 미답변 문의를 새로 가져오시겠습니까?\n\n크롤링에 시간이 소요됩니다 (1-3분).')) return;
+            
+            try {
+                showMessage('loading', '🤖 서버에서 미답변 문의를 수집하는 중...');
+                const res = await fetch(`${SERVER_URL}/api/fetch_unanswered`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage('success', `✅ ${data.count}개 미답변 문의를 가져왔습니다!`);
+                    loadUnanswered();
+                } else {
+                    showMessage('error', '❌ 가져오기 실패: ' + data.error);
+                }
+            } catch (error) {
+                showMessage('error', '❌ 가져오기 실패: ' + error.message);
+            }
+        }
+
+        // 엑셀 다운로드
+        function downloadExcel() {
+            window.open(`${SERVER_URL}/api/download_excel`, '_blank');
+        }
+
+        // 스케줄 모달
+        function openScheduleModal() {
+            document.getElementById('scheduleModal').classList.add('active');
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('active');
+        }
+
+        async function saveSchedule() {
+            const hour = document.getElementById('hour').value;
+            const minute = document.getElementById('minute').value;
+            
+            try {
+                const res = await fetch(`${SERVER_URL}/api/update_schedule`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({hour: parseInt(hour), minute: parseInt(minute)})
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage('success', '✅ 스케줄이 저장되었습니다!');
+                    loadScheduleInfo();
+                    closeScheduleModal();
+                } else {
+                    showMessage('error', '❌ 저장 실패: ' + data.error);
+                }
+            } catch (error) {
+                showMessage('error', '❌ 저장 실패: ' + error.message);
+            }
+        }
 
         // 미답변 목록 불러오기
         async function loadUnanswered() {
             try {
                 showMessage('loading', '데이터를 불러오는 중...');
-                
                 const res = await fetch(`${SERVER_URL}/api/unanswered`);
                 
-                // ✅ 로그인 체크
                 if (res.status === 401) {
-                    const data = await res.json();
-                    alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
-                    window.location.href = data.redirect || '/login';
+                    alert('로그인 세션이 만료되었습니다.');
+                    window.location.href = '/auth/login';
                     return;
                 }
                 
@@ -92,6 +281,7 @@
                 if (data.success) {
                     inquiries = data.data;
                     renderInquiries();
+                    document.getElementById('unanswered-count').textContent = `${data.count}개`;
                     showMessage('success', `✅ ${data.count}개 문의를 불러왔습니다.`);
                 } else {
                     showMessage('error', '❌ 데이터 로드 실패: ' + data.error);
@@ -112,14 +302,14 @@
             
             content.innerHTML = `
                 <div class="inquiry-list">
-                    ${inquiries.map((item, idx) => `
+                    ${inquiries.map((item) => `
                         <div class="inquiry-item" data-id="${item.id}">
                             <div class="inquiry-header">
                                 <div class="inquiry-meta">
-                                    <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall}</span>
-                                    <span><strong>유형:</strong> ${item.q_type}</span>
-                                    <span><strong>작성자:</strong> ${item.q_writer}</span>
-                                    <span><strong>날짜:</strong> ${item.q_date}</span>
+                                    <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall || 'N/A'}</span>
+                                    <span><strong>유형:</strong> ${item.q_type || 'N/A'}</span>
+                                    <span><strong>작성자:</strong> ${item.q_writer || 'N/A'}</span>
+                                    <span><strong>날짜:</strong> ${item.q_date || 'N/A'}</span>
                                 </div>
                                 <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
                                     ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
@@ -151,7 +341,7 @@
             `;
         }
 
-        // AI로 답변 생성
+        // AI 답변 생성
         async function generateAllAnswers() {
             if (!confirm('AI로 모든 답변을 생성하시겠습니까?')) return;
             
@@ -206,7 +396,7 @@
             }
         }
 
-        // 전체 답변 저장
+        // 전체 저장
         async function saveAll() {
             try {
                 showMessage('loading', '전체 답변을 저장하는 중...');
@@ -235,9 +425,9 @@
             }
         }
 
-        // Togle에 답변 전송 (서버에서 자동 처리)
+        // Togle 전송
         async function submitAll() {
-            if (!confirm('모든 답변을 Togle에 전송하시겠습니까?\n\n⚠️ 서버 PC에서 자동으로 처리됩니다 (1-5분 소요)')) return;
+            if (!confirm('모든 답변을 Togle에 전송하시겠습니까?\n\n⚠️ 서버에서 자동으로 처리됩니다 (1-5분 소요)')) return;
             
             try {
                 showMessage('loading', '🚀 서버로 전송 요청 중...');
@@ -257,12 +447,8 @@
                 const data = await res.json();
                 
                 if (data.success || res.status === 202) {
-                    showMessage('success', `✅ ${data.message || '전송 시작!'}\n\n서버에서 처리 중입니다. 잠시 후 새로고침하세요.`);
-                    
-                    // 30초 후 자동 새로고침
-                    setTimeout(() => {
-                        loadUnanswered();
-                    }, 30000);
+                    showMessage('success', `✅ ${data.message || '전송 시작!'}\n\n서버에서 처리 중입니다.`);
+                    setTimeout(() => loadUnanswered(), 30000);
                 } else {
                     showMessage('error', `❌ 전송 실패: ${data.error}`);
                 }
@@ -270,7 +456,7 @@
                 showMessage('error', '❌ 전송 실패: ' + error.message);
             }
         }
-        
+
         // 전송 상태 확인
         async function checkStatus() {
             try {
@@ -298,113 +484,5 @@
             }
         }
     </script>
-    <!-- <script>
-    // ⚙️ 임시 테스트용 데이터
-    let inquiries = [
-        {
-            id: 1,
-            q_shopping_mall: "테스트몰",
-            q_type: "배송 문의",
-            q_writer: "홍길동",
-            q_date: "2025-11-06",
-            q_question: "상품 언제 배송되나요?",
-            q_answer_title: "",
-            q_answer_content: ""
-        }
-    ];
-
-    // 페이지 로드 시 자동 실행
-    window.onload = () => {
-        renderInquiries();
-    };
-
-    // 화면에 문의 목록 표시
-    function renderInquiries() {
-        const content = document.getElementById('content');
-        
-        if (inquiries.length === 0) {
-            content.innerHTML = '<div class="empty">📭 미답변 문의가 없습니다.</div>';
-            return;
-        }
-        
-        content.innerHTML = `
-            <div class="inquiry-list">
-                ${inquiries.map((item, idx) => `
-                    <div class="inquiry-item" data-id="${item.id}">
-                        <div class="inquiry-header">
-                            <div class="inquiry-meta">
-                                <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall}</span>
-                                <span><strong>유형:</strong> ${item.q_type}</span>
-                                <span><strong>작성자:</strong> ${item.q_writer}</span>
-                                <span><strong>날짜:</strong> ${item.q_date}</span>
-                            </div>
-                            <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
-                                ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
-                            </span>
-                        </div>
-                        
-                        <div class="inquiry-question">
-                            <strong>📝 질문:</strong><br>
-                            ${item.q_question}
-                        </div>
-                        
-                        <div class="inquiry-answer">
-                            <div class="form-group">
-                                <label for="title-${item.id}">답변 제목</label>
-                                <input type="text" id="title-${item.id}" value="${item.q_answer_title || ''}" 
-                                       placeholder="답변 제목을 입력하세요">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="content-${item.id}">답변 내용</label>
-                                <textarea id="content-${item.id}" placeholder="답변 내용을 입력하세요">${item.q_answer_content || ''}</textarea>
-                            </div>
-                            
-                            <button class="btn-secondary" onclick="saveOne(${item.id})">💾 이 답변만 저장</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // 개별 답변 저장 (임시 동작: 화면에서만 반영)
-    function saveOne(id) {
-        const title = document.getElementById(`title-${id}`).value;
-        const content = document.getElementById(`content-${id}`).value;
-
-        // 데이터 업데이트
-        const inquiry = inquiries.find(i => i.id === id);
-        inquiry.q_answer_title = title;
-        inquiry.q_answer_content = content;
-
-        showMessage('success', '✅ 저장 완료! (임시 데이터)');
-        renderInquiries();
-    }
-
-    // 메시지 표시
-    function showMessage(type, text) {
-        const msgDiv = document.getElementById('message');
-        if (type === 'loading') {
-            msgDiv.innerHTML = `<div class="loading">${text}</div>`;
-        } else {
-            msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
-            setTimeout(() => msgDiv.innerHTML = '', 3000);
-        }
-    }
-
-    // 🚫 전송 버튼 비활성화
-    document.querySelectorAll('.btn-danger').forEach(btn => {
-        btn.onclick = () => alert('⚠️ 테스트 모드: 전송은 막혀 있습니다.');
-    });
-
-    // 🚀 AI 답변 생성 버튼도 임시 동작
-    document.querySelectorAll('.btn-primary').forEach(btn => {
-        if (btn.innerText.includes('AI 답변 생성')) {
-            btn.onclick = () => alert('⚠️ 테스트 모드: AI 답변 생성은 막혀 있습니다.');
-        }
-    });
-</script> -->
-
 </body>
 </html>

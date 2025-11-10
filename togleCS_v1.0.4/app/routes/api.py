@@ -278,3 +278,229 @@ def health_check():
         'status': 'ok',
         'message': 'API server is running'
     }), 200
+
+
+# ✅ 엑셀 정보 조회
+@api_bp.route('/excel_info', methods=['GET'])
+@login_required
+def excel_info():
+    """엑셀 파일 최종 수정 날짜 조회"""
+    try:
+        from app.utils.paths import get_data_dir
+        import os
+        from datetime import datetime
+        
+        base_dir = get_data_dir()
+        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+        
+        if os.path.exists(excel_path):
+            modified_time = os.path.getmtime(excel_path)
+            last_updated = datetime.fromtimestamp(modified_time).strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            last_updated = "파일 없음"
+        
+        return jsonify({
+            'success': True,
+            'last_updated': last_updated
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ✅ 엑셀 다운로드
+@api_bp.route('/download_excel', methods=['GET'])
+@login_required
+def download_excel():
+    """엑셀 파일 다운로드"""
+    from flask import send_file, jsonify
+    from app.utils.paths import get_data_dir
+    import os
+    import traceback
+    from datetime import datetime
+
+    try:
+        # 1️⃣ 기본 데이터 디렉토리 가져오기
+        base_dir = get_data_dir()
+        print(f"DEBUG: base_dir = {base_dir}")  # 경로 확인용
+
+        # 2️⃣ 엑셀 파일 경로 구성
+        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+        print(f"DEBUG: excel_path = {excel_path}")  # 경로 확인용
+
+        # 3️⃣ 파일 존재 여부 확인
+        if not os.path.exists(excel_path):
+            return jsonify({
+                'success': False,
+                'error': f'엑셀 파일이 존재하지 않습니다: {excel_path}'
+            }), 404
+
+        # 4️⃣ send_file로 전송
+        return send_file(
+            excel_path,
+            as_attachment=True,
+            download_name=f'togle_data_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        )
+
+    except Exception as e:
+        traceback.print_exc()  # 상세 오류 로그 출력
+        return jsonify({
+            'success': False,
+            'error': f"서버 오류 발생: {str(e)}"
+        }), 500
+
+
+# ✅ 스케줄 정보 조회
+@api_bp.route('/schedule_info', methods=['GET'])
+@login_required
+def schedule_info():
+    """자동 수집 스케줄 정보 조회"""
+    try:
+        from flask import current_app
+        
+        scheduler = current_app.scheduler
+        job = scheduler.get_job('daily_unanswered_collection')
+        
+        if job:
+            trigger = job.trigger
+            return jsonify({
+                'success': True,
+                'hour': trigger.fields[5].expressions[0].first,  # hour
+                'minute': trigger.fields[6].expressions[0].first  # minute
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'hour': 9,
+                'minute': 0
+            }), 200
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ✅ 스케줄 업데이트
+@api_bp.route('/update_schedule', methods=['POST'])
+@login_required
+def update_schedule():
+    """자동 수집 시간 변경"""
+    try:
+        from flask import current_app
+        
+        data = request.json
+        hour = data.get('hour', 9)
+        minute = data.get('minute', 0)
+        
+        scheduler = current_app.scheduler
+        
+        # 기존 작업 제거
+        try:
+            scheduler.remove_job('daily_unanswered_collection')
+        except:
+            pass
+        
+        # 새 작업 추가
+        from app import auto_open_togle_prompt
+        scheduler.add_job(
+            lambda: auto_open_togle_prompt(current_app),
+            trigger="cron",
+            hour=hour,
+            minute=minute,
+            id="daily_unanswered_collection",
+            replace_existing=True,
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'스케줄이 {hour:02d}:{minute:02d}로 변경되었습니다.'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ✅ 미답변 문의 가져오기 (수동 크롤링)
+@api_bp.route('/fetch_unanswered', methods=['POST'])
+@login_required
+def fetch_unanswered():
+    """서버에서 미답변 문의 크롤링"""
+    try:
+        import threading
+        from app.services.togleService import get_unanswered_list
+        from app.models import save_unanswered_to_db
+        
+        def background_fetch():
+            try:
+                unanswered_list = get_unanswered_list()
+                save_unanswered_to_db(unanswered_list)
+                print(f"✅ 수동 크롤링 완료: {len(unanswered_list)}개")
+            except Exception as e:
+                print(f"❌ 수동 크롤링 실패: {e}")
+        
+        # 백그라운드 실행
+        thread = threading.Thread(target=background_fetch, daemon=True)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '미답변 문의 수집을 시작했습니다. 잠시 후 새로고침하세요.'
+        }), 202
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ✅ 프로그램 업데이트
+@api_bp.route('/update_program', methods=['POST'])
+@login_required
+def update_program():
+    """프로그램 업데이트 (Git Pull 등)"""
+    try:
+        import subprocess
+        import threading
+        
+        def background_update():
+            try:
+                # Git Pull 실행
+                result = subprocess.run(
+                    ['git', 'pull'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                print(f"Git Pull 결과: {result.stdout}")
+                
+                # 서버 재시작 (운영 환경에 따라 수정 필요)
+                import sys
+                import os
+                os.execv(sys.executable, ['python'] + sys.argv)
+                
+            except Exception as e:
+                print(f"❌ 업데이트 실패: {e}")
+        
+        # 백그라운드 실행
+        thread = threading.Thread(target=background_update, daemon=True)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': '프로그램 업데이트를 시작했습니다. 잠시 후 재접속하세요.'
+        }), 202
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
