@@ -62,7 +62,9 @@ def create_app():
     logger.info("✅ CORS 설정 완료")
 
     # ✅ DB 설정
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///togle.db"
+    # app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///togle.db"
+    # ✅ PostgreSQL 연결 문자열 (예시)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:1234@localhost:5432/togle_db'
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     logger.info("✅ SQLAlchemy DB 설정 완료")
