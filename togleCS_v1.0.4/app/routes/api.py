@@ -4,7 +4,8 @@ from app.models import (
     get_unanswered_from_db, 
     update_answer_in_db, 
     mark_as_submitted,
-    get_inquiry_by_question
+    get_inquiry_by_question,
+    save_unanswered_to_db, UnansweredInquiry
 )
 
 api_bp = Blueprint('api', __name__)
@@ -437,24 +438,44 @@ def fetch_unanswered():
         import threading
         from app.services.togleService import get_unanswered_list
         from app.models import save_unanswered_to_db
-        
+        from flask import current_app
+        from selenium.common.exceptions import TimeoutException
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+
         def background_fetch():
             try:
-                unanswered_list = get_unanswered_list()
-                save_unanswered_to_db(unanswered_list)
-                print(f"✅ 수동 크롤링 완료: {len(unanswered_list)}개")
+                # 현재 앱 컨텍스트 사용
+                with current_app.app_context():
+                    unanswered_list = get_unanswered_list()
+                    
+                    safe_list = []
+                    for idx, item in enumerate(unanswered_list, start=1):
+                        try:
+                            # Selenium 페이지 이동 안전하게 처리
+                            WebDriverWait(item['driver'], 10).until(
+                                EC.presence_of_element_located((By.XPATH, f".//span[@class='block' and text()='{idx}']"))
+                            )
+                            safe_list.append(item)
+                        except TimeoutException:
+                            print(f"❌ 페이지 {idx} 이동 실패, 해당 문의는 스킵합니다.")
+
+                    # 안전하게 DB 저장
+                    save_unanswered_to_db(safe_list)
+                    print(f"✅ 수동 크롤링 완료: {len(safe_list)}개")
             except Exception as e:
                 print(f"❌ 수동 크롤링 실패: {e}")
-        
-        # 백그라운드 실행
+
+        # 백그라운드 스레드 실행
         thread = threading.Thread(target=background_fetch, daemon=True)
         thread.start()
-        
+
         return jsonify({
             'success': True,
             'message': '미답변 문의 수집을 시작했습니다. 잠시 후 새로고침하세요.'
         }), 202
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -504,3 +525,44 @@ def update_program():
             'success': False,
             'error': str(e)
         }), 500
+
+# save_unanswered API
+@api_bp.route('/save_unanswered', methods=['POST'])
+def save_unanswered():
+    try:
+        unanswered_list = request.json.get('unanswered_list', [])
+        
+        if not unanswered_list:
+            return jsonify({'success': False, 'error': '빈 목록입니다.'}), 400
+
+        # DB에 저장
+        success = save_unanswered_to_db(unanswered_list)
+        
+        if success:
+            return jsonify({'success': True, 'message': f'{len(unanswered_list)}개 항목 저장 완료'}), 200
+        else:
+            return jsonify({'success': False, 'error': 'DB 저장 실패'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# get_unanswered_from_db API
+@api_bp.route('/get_unanswered_from_db', methods=['GET'])
+def get_unanswered_from_db():
+    try:
+        unanswered_inquiries = UnansweredInquiry.query.filter_by(is_submitted=False).all()
+        unanswered_list = [{
+            'q_shopping_mall': item.q_shopping_mall,
+            'q_type': item.q_type,
+            'q_date': item.q_date,
+            'q_writer': item.q_writer,
+            'q_question': item.q_question,
+            'q_answer_title': item.q_answer_title,
+            'q_answer_content': item.q_answer_content
+        } for item in unanswered_inquiries]
+        
+        if not unanswered_list:
+            return jsonify({'success': True, 'message': '미답변 목록이 없습니다.'}), 200
+        
+        return jsonify({'success': True, 'qas': unanswered_list}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
