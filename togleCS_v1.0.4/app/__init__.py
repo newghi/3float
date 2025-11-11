@@ -27,7 +27,7 @@ unanswered_data = []  # 기존 코드 호환용
 # ✅ 로거 기본 설정
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler(os.path.join(LOG_DIR, "app.log"))
+file_handler = logging.FileHandler(os.path.join(LOG_DIR, "app.log"), encoding="utf-8")
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
