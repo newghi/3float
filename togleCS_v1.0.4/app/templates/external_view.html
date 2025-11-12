@@ -117,7 +117,7 @@
         <div class="control-section">
             <h3>📝 답변 관리</h3>
             <div class="controls">
-                <button class="btn-secondary" onclick="loadUnanswered()">🔄 새로고침</button>
+                <button class="btn-secondary" onclick="autoRequestLoadQnA()">🔄 새로고침</button>
                 <a href="/togle/external/edit_prompt" class="btn btn-secondary">📝 프롬프트 편집</a>
                 <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
                 <button class="btn-danger" onclick="submitAll()">📤 Togle 전송</button>
@@ -153,7 +153,7 @@
         let inquiries = [];
 
         window.onload = () => {
-            autoRequestLoadQnA();
+            // autoRequestLoadQnA();
             loadExcelInfo();
             loadScheduleInfo();
         };
