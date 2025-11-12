@@ -59,3 +59,8 @@ flask_session/
 
 # 실행파일
 togleCS_v1.0.4 실행파일
+
+# PyInstaller build folders
+build/
+dist/
+*.spec
