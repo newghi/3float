@@ -530,18 +530,19 @@ def update_program():
 @api_bp.route('/save_unanswered', methods=['POST'])
 def save_unanswered():
     try:
+        # 요청으로부터 unanswered_list를 가져옵니다.
         unanswered_list = request.json.get('unanswered_list', [])
         
         if not unanswered_list:
             return jsonify({'success': False, 'error': '빈 목록입니다.'}), 400
 
-        # DB에 저장
+        # 수정된 항목만 저장
         success = save_unanswered_to_db(unanswered_list)
         
         if success:
-            return jsonify({'success': True, 'message': f'{len(unanswered_list)}개 항목 저장 완료'}), 200
+            return jsonify({'success': True, 'message': f'{len(unanswered_list)}개 항목 수정 완료'}), 200
         else:
-            return jsonify({'success': False, 'error': 'DB 저장 실패'}), 500
+            return jsonify({'success': False, 'error': '수정된 항목이 없습니다.'}), 404
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

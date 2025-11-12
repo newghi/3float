@@ -117,7 +117,7 @@
         <div class="control-section">
             <h3>📝 답변 관리</h3>
             <div class="controls">
-                <button class="btn-secondary" onclick="loadUnanswered()">🔄 새로고침</button>
+                <button class="btn-secondary" id="refreshBtn" onclick="autoRequestLoadQnA()">🔄 새로고침</button>
                 <a href="/togle/external/edit_prompt" class="btn btn-secondary">📝 프롬프트 편집</a>
                 <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
                 <button class="btn-danger" onclick="submitAll()">📤 Togle 전송</button>
@@ -149,444 +149,462 @@
     </div>
 
     <script>
-        const SERVER_URL = 'http://220.120.14.112:5005';
-        let inquiries = [];
+const SERVER_URL = 'http://220.120.14.112:5005';
+let inquiries = [];
 
-        window.onload = () => {
-            autoRequestLoadQnA();
-            loadExcelInfo();
+window.onload = () => {
+    // autoRequestLoadQnA(); // 자동 로드 비활성화
+    loadExcelInfo();
+    loadScheduleInfo();
+};
+
+// 엑셀 정보 로드
+async function loadExcelInfo() {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/excel_info`);
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('excel-update').textContent = data.last_updated || '정보 없음';
+        }
+    } catch (error) {
+        document.getElementById('excel-update').textContent = '로드 실패';
+    }
+}
+
+// 스케줄 정보 로드
+async function loadScheduleInfo() {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/schedule_info`);
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('schedule-time').textContent = `매일 ${data.hour.toString().padStart(2, '0')}:${data.minute.toString().padStart(2, '0')}`;
+        }
+    } catch (error) {
+        console.error('스케줄 로드 실패:', error);
+    }
+}
+
+// 프로그램 업데이트
+async function rebootProgram() {
+    if (!confirm('프로그램을 업데이트하시겠습니까?\n\n서버가 재시작됩니다.')) return;
+    
+    try {
+        showMessage('loading', '프로그램 업데이트 중...');
+        const res = await fetch(`${SERVER_URL}/api/update_program`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success) {
+            showMessage('success', '✅ 업데이트가 시작되었습니다. 잠시 후 페이지를 새로고침하세요.');
+            setTimeout(() => window.location.reload(), 10000);
+        } else {
+            showMessage('error', '❌ 업데이트 실패: ' + data.error);
+        }
+    } catch (error) {
+        showMessage('error', '❌ 업데이트 실패: ' + error.message);
+    }
+}
+
+// 미답변 문의 가져오기
+async function fetchUnanswered() {
+    if (!confirm('서버에서 미답변 문의를 새로 가져오시겠습니까?\n\n크롤링에 시간이 소요됩니다 (1-3분).')) return;
+
+    try {
+        showMessage('loading', '🤖 서버에서 미답변 문의를 수집하는 중...');
+        
+        // 기존 fetch URL을 변경: get_unanswered_from_db API로 요청
+        const res = await fetch(`${SERVER_URL}/api/get_unanswered_from_db`, { method: 'GET' });
+        const data = await res.json();
+        
+        if (data.success) {
+            if (data.qas && data.qas.length > 0) {
+                // 미답변 문의 데이터를 화면에 렌더링
+                inquiries = data.qas;  // 전역 변수에 데이터 저장
+                renderInquiries();  // 화면에 데이터 렌더링
+
+                showMessage('success', `✅ ${data.qas.length}개 미답변 문의를 가져왔습니다!`);
+            } else {
+                inquiries = [];  // 데이터 없을 경우 빈 배열로 초기화
+                document.getElementById('unanswered-count').textContent = '0개';
+                renderInquiries();  // 화면 렌더링 (빈 목록일 경우에도)
+                showMessage('info', '❌ 미답변 문의가 없습니다.');
+            }
+        } else {
+            showMessage('error', '❌ 가져오기 실패: ' + data.error);
+        }
+    } catch (error) {
+        showMessage('error', '❌ 가져오기 실패: ' + error.message);
+    }
+}
+
+// 엑셀 다운로드
+function downloadExcel() {
+    window.open(`${SERVER_URL}/api/download_excel`, '_blank');
+}
+
+// 스케줄 모달
+function openScheduleModal() {
+    document.getElementById('scheduleModal').classList.add('active');
+}
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModal').classList.remove('active');
+}
+
+async function saveSchedule() {
+    const hour = document.getElementById('hour').value;
+    const minute = document.getElementById('minute').value;
+    
+    try {
+        const res = await fetch(`${SERVER_URL}/api/update_schedule`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({hour: parseInt(hour), minute: parseInt(minute)})
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showMessage('success', '✅ 스케줄이 저장되었습니다!');
             loadScheduleInfo();
+            closeScheduleModal();
+        } else {
+            showMessage('error', '❌ 저장 실패: ' + data.error);
+        }
+    } catch (error) {
+        showMessage('error', '❌ 저장 실패: ' + error.message);
+    }
+}
+
+// Q&A 데이터 불러오기 및 DB에 저장
+async function autoRequestLoadQnA() {
+    try {
+        showMessage('loading', '⏳ Q&A 데이터를 불러오는 중...');
+
+        // 미답변 데이터를 가져오는 API 호출
+        const res = await fetch(`${SERVER_URL}/togle/get_unanswered`);
+        if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+
+        const data = await res.json();
+        console.log('Returned Data:', data);
+
+        // Q&A 데이터가 정상적으로 반환되었는지 확인
+        if (data.qas && Array.isArray(data.qas) && data.qas.length > 0) {
+            // 전역 inquiries 배열 업데이트
+            inquiries = data.qas;
+
+            // 미답변 문의 수 업데이트
+            document.getElementById('unanswered-count').textContent = `${inquiries.length}개`;
+
+            // 화면 렌더링
+            renderInquiries();
+
+            // DB에 데이터를 저장하기 위한 API 호출
+            const saveRes = await fetch(`${SERVER_URL}/api/save_unanswered`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    unanswered_list: inquiries // inquiries 배열을 DB에 전송
+                })
+            });
+
+            if (!saveRes.ok) throw new Error(`저장 오류: ${saveRes.status}`);
+
+            const saveData = await saveRes.json();
+            if (saveData.success) {
+                // 성공 메시지 표시
+                showMessage('success', `✅ ${inquiries.length}개 문의를 불러왔고 DB에 저장되었습니다.`);
+            } else {
+                throw new Error(saveData.error || '저장 실패');
+            }
+        } else {
+            inquiries = [];
+            document.getElementById('unanswered-count').textContent = '0개';
+            renderInquiries();
+            showMessage('info', 'ℹ️ 미답변 문의가 없습니다.');
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage('error', '❌ Q&A 불러오기 실패: ' + err.message);
+    }
+}
+
+
+// 화면에 문의 목록 표시
+function renderInquiries() {
+    const content = document.getElementById('content');
+
+    if (inquiries.length === 0) {
+        content.innerHTML = '<div class="empty">📭 미답변 문의가 없습니다.</div>';
+        return;
+    }
+
+    content.innerHTML = `
+        <div class="inquiry-list">
+            ${inquiries.map((item, index) => `
+                <div class="inquiry-item" data-index="${index}">
+                    <div class="inquiry-header">
+                        <div class="inquiry-meta">
+                            <input type="checkbox" class="select-item" data-index="${index}">
+                            <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall || 'N/A'}</span>
+                            <span><strong>유형:</strong> ${item.q_type || 'N/A'}</span>
+                            <span><strong>작성자:</strong> ${item.q_writer || 'N/A'}</span>
+                            <span><strong>날짜:</strong> ${item.q_date || 'N/A'}</span>
+                        </div>
+                        <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
+                            ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
+                        </span>
+                    </div>
+
+                    <div class="inquiry-question">
+                        <strong>📝 질문:</strong><br>
+                        ${item.q_question || '질문 내용 없음'}
+                    </div>
+
+                    <div class="inquiry-answer">
+                        <div class="form-group">
+                            <label for="title-${index}">답변 제목</label>
+                            <input type="text" id="title-${index}" 
+                                value="${item.q_answer_title || ''}" 
+                                placeholder="답변 제목을 입력하세요">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content-${index}">답변 내용</label>
+                            <textarea id="content-${index}" placeholder="답변 내용을 입력하세요">${item.q_answer_content || ''}</textarea>
+                        </div>
+                        
+                        <div class="item-actions">
+                            <button class="btn-save" onclick="saveOne(${index})">💾 저장</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// 개별 저장 버튼 클릭 시 특정 항목을 서버에 저장
+async function saveOne(index) {
+    try {
+        // 해당 항목에 대한 답변 제목과 내용 수집
+        const answerTitle = document.getElementById(`title-${index}`).value;
+        const answerContent = document.getElementById(`content-${index}`).value;
+        const updatedInquiry = {
+            ...inquiries[index],
+            q_answer_title: answerTitle,
+            q_answer_content: answerContent
         };
 
-        // 엑셀 정보 로드
-        async function loadExcelInfo() {
-            try {
-                const res = await fetch(`${SERVER_URL}/api/excel_info`);
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('excel-update').textContent = data.last_updated || '정보 없음';
-                }
-            } catch (error) {
-                document.getElementById('excel-update').textContent = '로드 실패';
-            }
+        // 서버에 저장 요청
+        const res = await fetch(`${SERVER_URL}/api/save_unanswered`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                unanswered_list: [updatedInquiry]  // 해당 항목만 전송
+            })
+        });
+
+        if (!res.ok) throw new Error(`저장 오류: ${res.status}`);
+
+        const saveData = await res.json();
+        if (saveData.success) {
+            // 성공 메시지 표시
+            showMessage('success', `✅ 문의 ${index + 1}번이 DB에 저장되었습니다.`);
+        } else {
+            throw new Error(saveData.error || '저장 실패');
         }
+    } catch (err) {
+        console.error(err);
+        showMessage('error', '❌ 개별 저장 실패: ' + err.message);
+    }
+}
 
-        // 스케줄 정보 로드
-        async function loadScheduleInfo() {
-            try {
-                const res = await fetch(`${SERVER_URL}/api/schedule_info`);
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('schedule-time').textContent = `매일 ${data.hour.toString().padStart(2, '0')}:${data.minute.toString().padStart(2, '0')}`;
-                }
-            } catch (error) {
-                console.error('스케줄 로드 실패:', error);
-            }
+// 전체 저장 버튼 클릭 시 모든 데이터를 서버에 저장
+async function saveAll() {
+    try {
+        // 각 항목에 대한 답변 제목과 내용을 수집
+        const updatedInquiries = inquiries.map((item, index) => {
+            const answerTitle = document.getElementById(`title-${index}`).value;
+            const answerContent = document.getElementById(`content-${index}`).value;
+
+            return {
+                ...item,
+                q_answer_title: answerTitle,
+                q_answer_content: answerContent
+            };
+        });
+
+        // 서버에 저장 요청
+        const res = await fetch(`${SERVER_URL}/api/save_unanswered`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                unanswered_list: updatedInquiries  // 업데이트된 데이터 전송
+            })
+        });
+
+        if (!res.ok) throw new Error(`저장 오류: ${res.status}`);
+
+        const saveData = await res.json();
+        if (saveData.success) {
+            // 성공 메시지 표시
+            showMessage('success', `✅ ${updatedInquiries.length}개 문의가 DB에 저장되었습니다.`);
+        } else {
+            throw new Error(saveData.error || '저장 실패');
         }
+    } catch (err) {
+        console.error(err);
+        showMessage('error', '❌ 전체 저장 실패: ' + err.message);
+    }
+}
 
-        // 프로그램 업데이트
-        async function rebootProgram() {
-            if (!confirm('프로그램을 업데이트하시겠습니까?\n\n서버가 재시작됩니다.')) return;
-            
-            try {
-                showMessage('loading', '프로그램 업데이트 중...');
-                const res = await fetch(`${SERVER_URL}/api/update_program`, { method: 'POST' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    showMessage('success', '✅ 업데이트가 시작되었습니다. 잠시 후 페이지를 새로고침하세요.');
-                    setTimeout(() => window.location.reload(), 10000);
-                } else {
-                    showMessage('error', '❌ 업데이트 실패: ' + data.error);
-                }
-            } catch (error) {
-                showMessage('error', '❌ 업데이트 실패: ' + error.message);
-            }
+
+// Togle 전송
+async function submitAll() {
+    if (!confirm('모든 답변을 Togle에 전송하시겠습니까?\n\n⚠️ 서버에서 자동으로 처리됩니다 (1-5분 소요)')) return;
+    
+    try {
+        showMessage('loading', '🚀 서버로 전송 요청 중...');
+        
+        const answers = inquiries.map((item, index) => ({
+            q_question: item.q_question,
+            q_shopping_mall: item.q_shopping_mall,
+            q_type: item.q_type,
+            q_date: item.q_date,
+            q_writer: item.q_writer,
+            q_answer_title: document.getElementById(`title-${index}`).value,
+            q_answer_content: document.getElementById(`content-${index}`).value
+        }));
+        
+        console.log('전송할 답변:', answers); // 디버깅용
+        
+        const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({answers})
+        });
+        
+        const data = await res.json();
+        
+        if (data.success || res.status === 202) {
+            showMessage('success', `✅ ${data.message || '전송 시작!'}\n\n서버에서 처리 중입니다.`);
+            setTimeout(() => autoRequestLoadQnA(), 5000);
+        } else {
+            showMessage('error', `❌ 전송 실패: ${data.error}`);
         }
+    } catch (error) {
+        console.error('전송 오류:', error);
+        showMessage('error', '❌ 전송 실패: ' + error.message);
+    }
+}
 
-        // 미답변 문의 가져오기
-        async function fetchUnanswered() {
-            if (!confirm('서버에서 미답변 문의를 새로 가져오시겠습니까?\n\n크롤링에 시간이 소요됩니다 (1-3분).')) return;
+// 선택 항목 전송
+async function submitSelected() {
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.select-item:checked'));
+    const selectedIndices = selectedCheckboxes.map(cb => parseInt(cb.dataset.index));
 
-            try {
-                showMessage('loading', '🤖 서버에서 미답변 문의를 수집하는 중...');
-                
-                // 서버로 요청하여 미답변 문의를 가져옵니다.
-                const res = await fetch(`${SERVER_URL}/api/fetch_unanswered`, { method: 'POST' });
-                const data = await res.json();
+    if (selectedIndices.length === 0) {
+        alert('전송할 항목을 선택하세요.');
+        return;
+    }
 
-                if (data.success) {
-                    // 미답변 목록을 DB에 저장
-                    const unansweredList = data.unanswered_list; // 서버에서 받은 미답변 목록
-                    
-                    // 데이터베이스에 저장
-                    const saveRes = await fetch(`${SERVER_URL}/api/save_unanswered`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ unanswered_list: unansweredList })
-                    });
+    if (!confirm(`${selectedIndices.length}개 항목을 Togle에 전송하시겠습니까?`)) return;
 
-                    const saveData = await saveRes.json();
+    try {
+        showMessage('loading', '🚀 선택 항목 전송 중...');
+        
+        const answers = selectedIndices.map(index => {
+            const item = inquiries[index];
+            return {
+                q_question: item.q_question,
+                q_shopping_mall: item.q_shopping_mall,
+                q_type: item.q_type,
+                q_date: item.q_date,
+                q_writer: item.q_writer,
+                q_answer_title: document.getElementById(`title-${index}`).value,
+                q_answer_content: document.getElementById(`content-${index}`).value
+            };
+        });
 
-                    if (saveData.success) {
-                        showMessage('success', `✅ ${unansweredList.length}개 미답변 문의를 DB에 저장했습니다!`);
-                        loadUnansweredFromDb(); // DB에서 다시 불러오기
-                    } else {
-                        showMessage('error', '❌ 미답변 문의 DB 저장 실패: ' + saveData.error);
-                    }
-                } else {
-                    showMessage('error', '❌ 가져오기 실패: ' + data.error);
-                }
-            } catch (error) {
-                showMessage('error', '❌ 가져오기 실패: ' + error.message);
-            }
+        console.log('선택 항목 전송:', answers); // 디버깅용
+
+        const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({answers})
+        });
+
+        const data = await res.json();
+        if (data.success || res.status === 202) {
+            showMessage('success', `✅ ${data.message || '전송 요청 완료'} (${selectedIndices.length}개)`);
+            setTimeout(() => autoRequestLoadQnA(), 5000);
+        } else {
+            showMessage('error', `❌ 전송 실패: ${data.error}`);
         }
+    } catch (error) {
+        console.error('전송 오류:', error);
+        showMessage('error', '❌ 전송 중 오류: ' + error.message);
+    }
+}
 
-        // DB에서 미답변 문의를 가져와서 화면에 표시
-        async function loadUnansweredFromDb() {
-            try {
-                showMessage('loading', 'DB에서 미답변 문의를 불러오는 중...');
-                
-                const res = await fetch(`${SERVER_URL}/api/get_unanswered_from_db`);
-                const data = await res.json();
-                
-                if (data.success) {
-                    inquiries = data.qas; // DB에서 가져온 데이터를 업데이트
-                    document.getElementById('unanswered-count').textContent = `${inquiries.length}개`;
-                    renderInquiries(); // 화면에 미답변 목록 렌더링
-                    showMessage('success', `✅ DB에서 ${inquiries.length}개 미답변 문의를 불러왔습니다.`);
-                } else {
-                    inquiries = [];
-                    document.getElementById('unanswered-count').textContent = '0개';
-                    renderInquiries();
-                    showMessage('info', 'ℹ️ 미답변 문의가 없습니다.');
-                }
-            } catch (error) {
-                console.error(error);
-                showMessage('error', '❌ DB에서 미답변 문의 불러오기 실패: ' + error.message);
-            }
+// 토글 업데이트
+async function refreshTogle() {
+    try {
+        showMessage('loading', '데이터를 업데이트 중입니다...');
+
+        const res = await fetch(`${SERVER_URL}/togle/api/togles_update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!res.ok) throw new Error(`서버 응답 실패: ${res.status}`);
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error ?? '업데이트 실패');
+
+        showMessage('success', `✅ 업데이트 완료!`);
+        
+        // 데이터 새로고침
+        autoRequestLoadQnA();
+
+    } catch (error) {
+        console.error(error);
+        showMessage('error', '❌ 업데이트 실패: ' + (error.message ?? error));
+    }
+}
+
+// 전송 상태 확인
+async function checkStatus() {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/submit_status`);
+        const data = await res.json();
+        
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert('상태 확인 실패: ' + data.error);
         }
+    } catch (error) {
+        alert('상태 확인 실패: ' + error.message);
+    }
+}
 
-
-        // 엑셀 다운로드
-        function downloadExcel() {
-            window.open(`${SERVER_URL}/api/download_excel`, '_blank');
-        }
-
-        // 스케줄 모달
-        function openScheduleModal() {
-            document.getElementById('scheduleModal').classList.add('active');
-        }
-
-        function closeScheduleModal() {
-            document.getElementById('scheduleModal').classList.remove('active');
-        }
-
-        async function saveSchedule() {
-            const hour = document.getElementById('hour').value;
-            const minute = document.getElementById('minute').value;
-            
-            try {
-                const res = await fetch(`${SERVER_URL}/api/update_schedule`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({hour: parseInt(hour), minute: parseInt(minute)})
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    showMessage('success', '✅ 스케줄이 저장되었습니다!');
-                    loadScheduleInfo();
-                    closeScheduleModal();
-                } else {
-                    showMessage('error', '❌ 저장 실패: ' + data.error);
-                }
-            } catch (error) {
-                showMessage('error', '❌ 저장 실패: ' + error.message);
-            }
-        }
-
-        // Q&A 데이터 불러오기
-        async function autoRequestLoadQnA() {
-            try {
-                showMessage('loading', '⏳ Q&A 데이터를 불러오는 중...');
-                
-                const res = await fetch(`${SERVER_URL}/togle/get_unanswered`);
-                if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
-                
-                const data = await res.json();
-                console.log('Returned Data:', data);
-
-                if (data.qas && Array.isArray(data.qas) && data.qas.length > 0) {
-                    // 전역 inquiries 배열 업데이트
-                    inquiries = data.qas;
-                    
-                    // 미답변 문의 수 업데이트
-                    document.getElementById('unanswered-count').textContent = `${inquiries.length}개`;
-                    
-                    // 화면 렌더링
-                    renderInquiries();
-                    
-                    showMessage('success', `✅ ${inquiries.length}개 문의를 불러왔습니다.`);
-                } else {
-                    inquiries = [];
-                    document.getElementById('unanswered-count').textContent = '0개';
-                    renderInquiries();
-                    showMessage('info', 'ℹ️ 미답변 문의가 없습니다.');
-                }
-
-            } catch (err) {
-                console.error(err);
-                showMessage('error', '❌ Q&A 불러오기 실패: ' + err.message);
-            }
-        }
-
-        // 화면에 문의 목록 표시
-        function renderInquiries() {
-            const content = document.getElementById('content');
-
-            if (inquiries.length === 0) {
-                content.innerHTML = '<div class="empty">📭 미답변 문의가 없습니다.</div>';
-                return;
-            }
-
-            content.innerHTML = `
-                <!-- 기존 HTML 부분 -->
-                <div class="inquiry-list">
-                    ${inquiries.map((item, index) => `
-                        <div class="inquiry-item" data-index="${index}">
-                            <div class="inquiry-header">
-                                <div class="inquiry-meta">
-                                    <!-- 체크박스 추가 -->
-                                    <input type="checkbox" class="select-item" data-index="${index}">
-                                    <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall || 'N/A'}</span>
-                                    <span><strong>유형:</strong> ${item.q_type || 'N/A'}</span>
-                                    <span><strong>작성자:</strong> ${item.q_writer || 'N/A'}</span>
-                                    <span><strong>날짜:</strong> ${item.q_date || 'N/A'}</span>
-                                </div>
-                                <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
-                                    ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
-                                </span>
-                            </div>
-
-                            <div class="inquiry-question">
-                                <strong>📝 질문:</strong><br>
-                                ${item.q_question || '질문 내용 없음'}
-                            </div>
-
-                            <div class="inquiry-answer">
-                                <div class="form-group">
-                                    <label for="title-${index}">답변 제목</label>
-                                    <input type="text" id="title-${index}" value="${item.q_answer_title || ''}" placeholder="답변 제목을 입력하세요">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="content-${index}">답변 내용</label>
-                                    <textarea id="content-${index}" placeholder="답변 내용을 입력하세요">${item.q_answer_content || ''}</textarea>
-                                </div>
-                                
-                                <div class="item-actions">
-                                    <button class="btn-save" onclick="saveOne(${index})">💾 저장</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                            `;
-                <button class="btn-danger" onclick="submitSelected()">📤 선택 항목 전송</button>
-        }
-
-        // 개별 답변 저장
-        async function saveOne(index) {
-            try {
-                const item = inquiries[index];
-                const title = document.getElementById(`title-${index}`).value;
-                const content = document.getElementById(`content-${index}`).value;
-
-                if (!title || !content) {
-                    showMessage('error', '❌ 답변 제목과 내용을 모두 입력하세요.');
-                    return;
-                }
-
-                showMessage('loading', '저장 중...');
-
-                // 로컬 데이터 업데이트
-                inquiries[index].q_answer_title = title;
-                inquiries[index].q_answer_content = content;
-                
-                showMessage('success', '✅ 답변이 저장되었습니다!');
-                renderInquiries(); // 화면 갱신
-                
-            } catch (error) {
-                showMessage('error', '❌ 저장 실패: ' + error.message);
-            }
-        }
-
-        // 전체 저장
-        async function saveAll() {
-            try {
-                showMessage('loading', '전체 답변을 저장하는 중...');
-                
-                const updates = inquiries.map((item, index) => ({
-                    q_question: item.q_question,
-                    q_shopping_mall: item.q_shopping_mall,
-                    q_answer_title: document.getElementById(`title-${index}`).value,
-                    q_answer_content: document.getElementById(`content-${index}`).value
-                }));
-                
-                const res = await fetch(`${SERVER_URL}/api/update_batch`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({updates})
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    showMessage('success', `✅ ${data.updated || updates.length}개 저장 완료!`);
-                    autoRequestLoadQnA(); // 새로고침
-                } else {
-                    showMessage('error', '❌ 저장 실패: ' + (data.error || '알 수 없는 오류'));
-                }
-            } catch (error) {
-                showMessage('error', '❌ 저장 실패: ' + error.message);
-            }
-        }
-
-        // Togle 전송
-        async function submitAll() {
-            if (!confirm('모든 답변을 Togle에 전송하시겠습니까?\n\n⚠️ 서버에서 자동으로 처리됩니다 (1-5분 소요)')) return;
-            
-            try {
-                showMessage('loading', '🚀 서버로 전송 요청 중...');
-                
-                const answers = inquiries.map((item, index) => ({
-                    q_question: item.q_question,
-                    q_shopping_mall: item.q_shopping_mall,
-                    q_answer_title: document.getElementById(`title-${index}`).value,
-                    q_answer_content: document.getElementById(`content-${index}`).value
-                }));
-                
-                const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({answers})
-                });
-                
-                const data = await res.json();
-                
-                if (data.success || res.status === 202) {
-                    showMessage('success', `✅ ${data.message || '전송 시작!'}\n\n서버에서 처리 중입니다.`);
-                    setTimeout(() => autoRequestLoadQnA(), 5000);
-                } else {
-                    showMessage('error', `❌ 전송 실패: ${data.error}`);
-                }
-            } catch (error) {
-                showMessage('error', '❌ 전송 실패: ' + error.message);
-            }
-        }
-
-        // 선택 항목 전송
-        async function submitSelected() {
-            // 체크된 항목들만 필터링
-            const selectedCheckboxes = Array.from(document.querySelectorAll('.select-item:checked'));
-            const selectedIndices = selectedCheckboxes.map(cb => parseInt(cb.dataset.index));
-
-            // 선택된 항목이 없으면 경고
-            if (selectedIndices.length === 0) {
-                alert('전송할 항목을 선택하세요.');
-                return;
-            }
-
-            if (!confirm(`${selectedIndices.length}개 항목을 Togle에 전송하시겠습니까?`)) return;
-
-            try {
-                showMessage('loading', '🚀 선택 항목 전송 중...');
-
-                // 선택된 항목들만 추출하여 전송할 데이터 생성
-                const answers = selectedIndices.map(index => {
-                    const item = inquiries[index];
-                    return {
-                        q_question: item.q_question,
-                        q_shopping_mall: item.q_shopping_mall,
-                        q_answer_title: document.getElementById(`title-${index}`).value,
-                        q_answer_content: document.getElementById(`content-${index}`).value
-                    };
-                });
-
-                // 서버로 전송
-                const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({answers})
-                });
-
-                const data = await res.json();
-
-                if (data.success || res.status === 202) {
-                    showMessage('success', `✅ ${data.message || '전송 요청 완료'} (${selectedIndices.length}개)`);
-                    setTimeout(() => autoRequestLoadQnA(), 5000); // 새로고침
-                } else {
-                    showMessage('error', `❌ 전송 실패: ${data.error}`);
-                }
-            } catch (error) {
-                showMessage('error', '❌ 전송 중 오류: ' + error.message);
-            }
-        }
-
-        // 토글 업데이트
-        async function refreshTogle() {
-            try {
-                showMessage('loading', '데이터를 업데이트 중입니다...');
-
-                const res = await fetch(`${SERVER_URL}/togle/api/togles_update`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (!res.ok) throw new Error(`서버 응답 실패: ${res.status}`);
-
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error ?? '업데이트 실패');
-
-                showMessage('success', `✅ 업데이트 완료!`);
-                
-                // 데이터 새로고침
-                autoRequestLoadQnA();
-
-            } catch (error) {
-                console.error(error);
-                showMessage('error', '❌ 업데이트 실패: ' + (error.message ?? error));
-            }
-        }
-
-        // 전송 상태 확인
-        async function checkStatus() {
-            try {
-                const res = await fetch(`${SERVER_URL}/api/submit_status`);
-                const data = await res.json();
-                
-                if (data.success) {
-                    alert(data.message);
-                } else {
-                    alert('상태 확인 실패: ' + data.error);
-                }
-            } catch (error) {
-                alert('상태 확인 실패: ' + error.message);
-            }
-        }
-
-        // 메시지 표시
-        function showMessage(type, text) {
-            const msgDiv = document.getElementById('message');
-            if (type === 'loading') {
-                msgDiv.innerHTML = `<div class="loading">${text}</div>`;
-            } else {
-                msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
-                setTimeout(() => msgDiv.innerHTML = '', 5000);
-            }
-        }
+// 메시지 표시
+function showMessage(type, text) {
+    const msgDiv = document.getElementById('message');
+    if (type === 'loading') {
+        msgDiv.innerHTML = `<div class="loading">${text}</div>`;
+    } else {
+        msgDiv.innerHTML = `<div class="${type}">${text}</div>`;
+        setTimeout(() => msgDiv.innerHTML = '', 5000);
+    }
+}
     </script>
 </body>
 </html>
