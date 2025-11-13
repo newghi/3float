@@ -120,15 +120,19 @@
                 <button class="btn-secondary" id="refreshBtn" onclick="autoRequestLoadQnA()">🔄 새로고침</button>
                 <a href="/togle/external/edit_prompt" class="btn btn-secondary">📝 프롬프트 편집</a>
                 <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
-                <button class="btn-danger" onclick="submitSelected()">📤 선택 항목만 전송하기</button>
+                <button class="btn-sel" style="background-color: yellow;" onclick="submitSelected()">📤 선택 항목만 전송하기</button>
                 <button class="btn-danger" onclick="submitAll()">📤 모두 Togle 전송</button>
                 <button class="btn-secondary" onclick="checkStatus()">📊 전송 상태</button>
             </div>
         </div>
         
         <div id="message"></div>
-        <div id="content" class="loading">로딩 중...</div>
-    </div>
+        <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        </div>
+        <!-- 미답변 문의 목록 표시 영역 -->
+        <div id="content"></div>
+
 
     <!-- 스케줄 설정 모달 -->
     <div id="scheduleModal" class="modal">
@@ -204,6 +208,37 @@ async function rebootProgram() {
         showMessage('error', '❌ 업데이트 실패: ' + error.message);
     }
 }
+
+function showLoading() {
+  document.getElementById("loading-overlay").style.display = "flex";
+}
+function hideLoading() {
+  document.getElementById("loading-overlay").style.display = "none";
+}
+
+async function pollStatus() {
+  try {
+    const res = await fetch('/togle/task_status');
+    const data = await res.json();
+    document.getElementById('message').textContent = data.message;
+    document.getElementById('excel-update').textContent = data.excel_last_updated || '정보 없음';
+
+    if (data.step !== 'done') {
+      setTimeout(pollStatus, 60000);
+    } else {
+      hideLoading();
+      document.getElementById('message').textContent = '✅ 모든 작업 완료! 스케줄러 최신화 완료';
+    }
+  } catch (err) {
+    console.error(err);
+    setTimeout(pollStatus, 60000);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showLoading();
+  pollStatus();
+});
 
 // 미답변 문의 가져오기
 async function fetchUnanswered() {

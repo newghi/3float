@@ -490,7 +490,23 @@ def notebookLM_update(filepath):
     return None
 
 # 미답변 문의글 list 추출 함수
-def get_unanswered_list(driver):
+def get_unanswered_list():
+    driver = set_chromedriver()
+    
+    # togle 문의글 페이지 접속 매크로
+    togle_macro(driver)
+
+    # 미답변 문의 버튼 선택
+    search_element(driver, By.XPATH, "//div[normalize-space(text())='미답변 문의']", "click")
+    time.sleep(3)
+
+    # 크롤링 함수
+    unanswered_list = inquiries_crawling(driver)
+
+    driver.quit()
+    return unanswered_list
+
+def get_unanswered_list2(driver):
     # togle 문의글 페이지 접속 매크로
     togle_macro(driver)
 
@@ -853,7 +869,7 @@ def updateTogleDataSchduler(formData, driver):
     # 크롤링 함수
     inquiries_list = inquiries_crawling(driver)
 
-    driver.quit()
+    # driver.quit()
     return inquiries_list
 
 # 문의글들에 카테고리를 붙이는 함수

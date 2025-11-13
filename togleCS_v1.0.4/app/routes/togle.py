@@ -2,6 +2,9 @@ from flask import Blueprint, render_template, request, redirect, send_file, curr
 from datetime import date, datetime
 import os
 from pathlib import Path
+from app.__init__ import send_progress, progress_queue, current_progress
+from flask import Response, stream_with_context, jsonify
+import queue
 
 from app.services.togleService import (
     updateTogleData, append_category_id, notebookLM_update, get_unanswered_list,
@@ -378,56 +381,167 @@ from datetime import datetime, timedelta
 #         print(f"❌ 서버 에러: {e}")
 #         return jsonify(success=False, error=str(e)), 500
 
-
 # 전체 문의 내역 업데이트
-@togle_bp.route('/all_update', methods=['POST'])
-def togle_all_update():
-    # form 데이터 추출
-    formData = request.form
-    print(f"🗒️ 넘어온 데이터 {formData}")
+def togle_all_update_internal(formData, driver=None):
+    """전체 문의 내역 업데이트"""
+    print(f"🗒️ 내부 호출 formData: {formData}")
+    
+    # ✅ driver가 없으면 새로 생성
+    driver_created = False
+    if driver is None:
+        from app.drivers.chromedriver import set_chromedriver
+        driver = set_chromedriver()
+        driver_created = True
+        print("✅ 새로운 크롬 드라이버 생성")
+    
+    try:
+        # 1. 데이터 수집
+        send_progress("data_collect", "📋 문의 내역 데이터를 수집하고 있습니다...", "in_progress")
+        update_list = updateTogleDataSchduler(formData, driver)
+        send_progress("data_collect", f"✅ {len(update_list)}개 데이터 수집 완료", "completed")
+        
+        base_dir = get_data_dir()
 
-    # togle 리스트 추출 함수
-    update_list = updateTogleDataSchduler(formData, driver)
+        # 2. 엑셀 파일 업데이트
+        send_progress("excel_update", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
+        append_unique_to_excel(
+            data_list=update_list,
+            filename="togle_data.xlsx",
+            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
+            col_mapping={
+                # 기존 col_mapping 유지
+            },
+            sheetname="전체",
+            key_fields=["q_date"],
+            sort_by="q_date"
+        )
+        send_progress("excel_update", "✅ 엑셀 파일 업데이트 완료", "completed")
 
-    # ✅ base_dir 계산
+        # 3. PDF 변환
+        send_progress("pdf_convert", "📄 PDF 파일을 생성하고 있습니다...", "in_progress")
+        excel_to_pdf(
+            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
+            output_path=os.path.join(base_dir, "app", "data", "togle_data.pdf"),
+            source_sheet="전체",
+            columns_order=[
+                # 기존 columns_order 유지
+            ],
+            small_headers=[
+                # 기존 small_headers 유지
+            ],
+            big_headers=(
+                # 기존 big_headers 유지
+            ),
+            orientation="landscape",
+            repeat_header=True
+        )
+        send_progress("pdf_convert", "✅ PDF 파일 생성 완료", "completed")
+
+        # 4. 노트북LM 업데이트
+        send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
+        notebookLM_update(filepath=os.path.join(base_dir, "app", "data", "togle_data.pdf"))
+        send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
+        
+        print("✅ togle_all_update_internal 완료")
+        
+    except Exception as e:
+        print(f"❌ togle_all_update_internal 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        send_progress("update_error", f"❌ 업데이트 중 오류: {str(e)}", "error")
+        raise
+    finally:
+        # ✅ 이 함수에서 driver를 생성했다면 종료
+        if driver_created and driver:
+            try:
+                driver.quit()
+                print("✅ 크롬 드라이버 종료 (togle_all_update_internal)")
+            except Exception as e:
+                print(f"❌ 드라이버 종료 오류: {e}")
+
+
+@togle_bp.route('/api/scheduler/progress')
+def scheduler_progress():
+    """실시간 진행 상황을 SSE로 전송"""
+    def generate():
+        while True:
+            try:
+                # 큐에서 진행 상황 가져오기 (타임아웃 30초)
+                progress = progress_queue.get(timeout=30)
+                yield f"data: {jsonify(progress).get_data(as_text=True)}\n\n"
+                
+                # 완료 또는 에러 시 종료
+                if progress['status'] in ['completed', 'error'] and progress['step'] == 'complete':
+                    break
+            except queue.Empty:
+                # 타임아웃 시 keep-alive 전송
+                yield f"data: {jsonify({'status': 'heartbeat'}).get_data(as_text=True)}\n\n"
+    
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+# 현재 진행 상황 조회 엔드포인트
+@togle_bp.route('/api/scheduler/status')
+def scheduler_status():
+    """현재 스케줄러 상태 조회"""
+    return jsonify(current_progress)
+
+# 엑셀 정보 조회 엔드포인트 수정
+@togle_bp.route('/api/excel_info')
+def excel_info():
+    """엑셀 파일 최종 업데이트 시간 조회"""
+    try:
+        base_dir = get_data_dir()
+        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+        
+        if os.path.exists(excel_path):
+            timestamp = os.path.getmtime(excel_path)
+            last_updated = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+            return jsonify({
+                "success": True,
+                "last_updated": last_updated
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "last_updated": "파일 없음"
+            })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "last_updated": "로드 실패"
+        })
+
+@togle_bp.route('/task_status', methods=['GET'])
+def task_status():
+    """프론트엔드에서 폴링할 진행 상태 반환"""
+    from app import current_progress  # 전역 상태 가져오기
+
     base_dir = get_data_dir()
+    excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
 
-    # 기존 엑셀파일에 덧붙이기 함수
-    append_unique_to_excel(
-        data_list = update_list,
-        filename="togle_data.xlsx",
-        filepath = os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
-        col_mapping={
-            "q_shopping_mall": "쇼핑몰",
-            "q_type": "유형",
-            "q_date": "문의일",
-            "q_answered": "답변여부",
-            "q_writer": "작성자",
-            "q_question": "문의내용",
-            "q_answer": "답변"
-        },
-        sheetname="전체",
-        key_fields=["q_date"],
-        sort_by="q_date"
-    )
+    # 엑셀 파일 수정 시간 확인
+    excel_last_updated = None
+    if os.path.exists(excel_path):
+        timestamp = os.path.getmtime(excel_path)
+        excel_last_updated = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
-    # 엑셀 파일을 pdf로 변환
-    excel_to_pdf(
-        filepath = os.path.join(base_dir, "app", "data", "togle_data.xlsx"), 
-        output_path = os.path.join(base_dir, "app", "data", "togle_data.pdf"),
-        source_sheet="전체",           # 원본 시트명
-        columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
-        small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
-        big_headers=("문의내용","답변"),
-        orientation="landscape",
-        repeat_header=True            # 두 열 폭 동일(문자 기준)
-    )
+    return jsonify({
+        "step": current_progress.get("step"),
+        "status": current_progress.get("status"),
+        "message": current_progress.get("message"),
+        "excel_last_updated": excel_last_updated,
+    })
 
-    # 노트푹LM 업데이트
-    notebookLM_update(filepath = os.path.join(base_dir, "app", "data", "togle_data.pdf"))
+# 웹 호출용 라우트
+@togle_bp.route('/togle_all_update', methods=['POST'])
+def togle_all_update_route():
+    formData = request.form
+    togle_all_update_internal(formData)
     return render_template_string("""
     <script>
       alert("✅ 업데이트가 완료되었습니다!");
       window.location.href = "{{ url_for('index.index') }}";
     </script>
     """)
+
