@@ -47,30 +47,51 @@ class UnansweredInquiry(db.Model):
 def save_unanswered_to_db(unanswered_list):
     """
     미답변 목록을 DB에 저장
-    기존 미제출 데이터는 삭제하고 새로 저장
+    기존 데이터가 있으면 UPDATE, 없으면 INSERT
     """
     try:
-        # 기존 미제출 데이터만 삭제
-        UnansweredInquiry.query.filter_by(is_submitted=False).delete()
-        
-        # 새 데이터 저장
         for item in unanswered_list:
-            inquiry = UnansweredInquiry(
-                q_shopping_mall=item.get('q_shopping_mall'),
-                q_type=item.get('q_type'),
-                q_date=item.get('q_date'),
-                q_writer=item.get('q_writer'),
-                q_question=item.get('q_question'),
-                q_answer_title=item.get('q_answer_title', ''),
-                q_answer_content=item.get('q_answer_content', ''),
-                is_submitted=False
-            )
-            db.session.add(inquiry)
-        
+            # 고유 식별 기준 설정 (id가 있다면 id로 조회)
+            question_id = item.get('id') or item.get('q_id') or item.get('question_id')
+
+            if question_id:
+                inquiry = UnansweredInquiry.query.get(question_id)
+            else:
+                # id가 없으면 고유 조건으로 검색
+                inquiry = UnansweredInquiry.query.filter_by(
+                    q_shopping_mall=item.get('q_shopping_mall'),
+                    q_writer=item.get('q_writer'),
+                    q_question=item.get('q_question'),
+                    q_date=item.get('q_date')
+                ).first()
+
+            # ① 이미 존재하면 UPDATE
+            if inquiry:
+                inquiry.q_answer_title = item.get('q_answer_title', '')
+                inquiry.q_answer_content = item.get('q_answer_content', '')
+                inquiry.q_type = item.get('q_type', inquiry.q_type)
+                inquiry.is_submitted = False
+                if hasattr(inquiry, 'updated_at'):
+                    inquiry.updated_at = datetime.now()
+
+            # ② 존재하지 않으면 INSERT
+            else:
+                new_inquiry = UnansweredInquiry(
+                    q_shopping_mall=item.get('q_shopping_mall'),
+                    q_type=item.get('q_type'),
+                    q_date=item.get('q_date'),
+                    q_writer=item.get('q_writer'),
+                    q_question=item.get('q_question'),
+                    q_answer_title=item.get('q_answer_title', ''),
+                    q_answer_content=item.get('q_answer_content', ''),
+                    is_submitted=False
+                )
+                db.session.add(new_inquiry)
+
         db.session.commit()
-        print(f"✅ {len(unanswered_list)}개 항목 DB 저장 완료")
+        print(f"✅ {len(unanswered_list)}개 항목 DB 저장 완료 (업데이트 포함)")
         return True
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"❌ DB 저장 실패: {e}")
