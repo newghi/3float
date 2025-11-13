@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.services.togleService import (
     updateTogleData, append_category_id, notebookLM_update, get_unanswered_list,
-    get_notebookAnswer, upload_togle_answer
+    get_notebookAnswer, upload_togle_answer, updateTogleDataSchduler
 )
 from app.services.fileService import append_unique_to_excel, excel_to_pdf
 from app.utils.paths import get_data_dir
@@ -306,74 +306,128 @@ def external_save_prompt():
 
 from datetime import datetime, timedelta
 
-@togle_bp.route('/api/togles_update', methods=['POST'])
-def togle_update():
-    try:
-        # JSON 데이터 받기
-        formData = request.get_json()
-        if not formData:
-            return jsonify(success=False, error="데이터가 없습니다."), 400
+# @togle_bp.route('/api/togles_update', methods=['POST'])
+# def togle_update():
+#     try:
+#         # JSON 데이터 받기
+#         formData = request.get_json()
+#         if not formData:
+#             return jsonify(success=False, error="데이터가 없습니다."), 400
 
-        print(f"🗒️ 넘어온 데이터: {formData}")
+#         print(f"🗒️ 넘어온 데이터: {formData}")
 
-        # 날짜 기본값 처리
-        today = datetime.today().date()
-        start_date_str = formData.get('start_date', '')
-        end_date_str = formData.get('end_date', '')
+#         # 날짜 기본값 처리
+#         today = datetime.today().date()
+#         start_date_str = formData.get('start_date', '')
+#         end_date_str = formData.get('end_date', '')
 
-        # 비어있으면 기본값 지정 (예: 최근 7일)
-        if not start_date_str:
-            start_date = today - timedelta(days=7)
-        else:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+#         # 비어있으면 기본값 지정 (예: 최근 7일)
+#         if not start_date_str:
+#             start_date = today - timedelta(days=7)
+#         else:
+#             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
 
-        if not end_date_str:
-            end_date = today
-        else:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+#         if not end_date_str:
+#             end_date = today
+#         else:
+#             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
-        # 다시 formData에 날짜 넣기
-        formData['start_date'] = start_date.strftime('%Y-%m-%d')
-        formData['end_date'] = end_date.strftime('%Y-%m-%d')
+#         # 다시 formData에 날짜 넣기
+#         formData['start_date'] = start_date.strftime('%Y-%m-%d')
+#         formData['end_date'] = end_date.strftime('%Y-%m-%d')
 
-        # togle 리스트 업데이트
-        update_list = updateTogleData(formData)
+#         # togle 리스트 업데이트
+#         update_list = updateTogleData(formData)
 
-        # 엑셀/노트북 처리 등 기존 로직...
-        base_dir = get_data_dir()
-        append_unique_to_excel(
-            data_list=update_list,
-            filename="togle_data.xlsx",
-            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
-            col_mapping={
-                "q_shopping_mall": "쇼핑몰",
-                "q_type": "유형",
-                "q_date": "문의일",
-                "q_answered": "답변여부",
-                "q_writer": "작성자",
-                "q_question": "문의내용",
-                "q_answer": "답변"
-            },
-            sheetname="전체",
-            key_fields=["q_date"],
-            sort_by="q_date"
-        )
+#         # 엑셀/노트북 처리 등 기존 로직...
+#         base_dir = get_data_dir()
+#         append_unique_to_excel(
+#             data_list=update_list,
+#             filename="togle_data.xlsx",
+#             filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
+#             col_mapping={
+#                 "q_shopping_mall": "쇼핑몰",
+#                 "q_type": "유형",
+#                 "q_date": "문의일",
+#                 "q_answered": "답변여부",
+#                 "q_writer": "작성자",
+#                 "q_question": "문의내용",
+#                 "q_answer": "답변"
+#             },
+#             sheetname="전체",
+#             key_fields=["q_date"],
+#             sort_by="q_date"
+#         )
 
-        excel_to_pdf(
-            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"), 
-            output_path=os.path.join(base_dir, "app", "data", "togle_data.pdf"),
-            source_sheet="전체",
-            columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
-            small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
-            big_headers=("문의내용","답변"),
-            orientation="landscape",
-            repeat_header=True
-        )
+#         excel_to_pdf(
+#             filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"), 
+#             output_path=os.path.join(base_dir, "app", "data", "togle_data.pdf"),
+#             source_sheet="전체",
+#             columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+#             small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+#             big_headers=("문의내용","답변"),
+#             orientation="landscape",
+#             repeat_header=True
+#         )
 
-        notebookLM_update(filepath=os.path.join(base_dir, "app", "data", "togle_data.pdf"))
+#         notebookLM_update(filepath=os.path.join(base_dir, "app", "data", "togle_data.pdf"))
 
-        return jsonify(success=True, count=len(update_list))
+#         return jsonify(success=True, count=len(update_list))
 
-    except Exception as e:
-        print(f"❌ 서버 에러: {e}")
-        return jsonify(success=False, error=str(e)), 500
+#     except Exception as e:
+#         print(f"❌ 서버 에러: {e}")
+#         return jsonify(success=False, error=str(e)), 500
+
+
+# 전체 문의 내역 업데이트
+@togle_bp.route('/all_update', methods=['POST'])
+def togle_all_update():
+    # form 데이터 추출
+    formData = request.form
+    print(f"🗒️ 넘어온 데이터 {formData}")
+
+    # togle 리스트 추출 함수
+    update_list = updateTogleDataSchduler(formData, driver)
+
+    # ✅ base_dir 계산
+    base_dir = get_data_dir()
+
+    # 기존 엑셀파일에 덧붙이기 함수
+    append_unique_to_excel(
+        data_list = update_list,
+        filename="togle_data.xlsx",
+        filepath = os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
+        col_mapping={
+            "q_shopping_mall": "쇼핑몰",
+            "q_type": "유형",
+            "q_date": "문의일",
+            "q_answered": "답변여부",
+            "q_writer": "작성자",
+            "q_question": "문의내용",
+            "q_answer": "답변"
+        },
+        sheetname="전체",
+        key_fields=["q_date"],
+        sort_by="q_date"
+    )
+
+    # 엑셀 파일을 pdf로 변환
+    excel_to_pdf(
+        filepath = os.path.join(base_dir, "app", "data", "togle_data.xlsx"), 
+        output_path = os.path.join(base_dir, "app", "data", "togle_data.pdf"),
+        source_sheet="전체",           # 원본 시트명
+        columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+        small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+        big_headers=("문의내용","답변"),
+        orientation="landscape",
+        repeat_header=True            # 두 열 폭 동일(문자 기준)
+    )
+
+    # 노트푹LM 업데이트
+    notebookLM_update(filepath = os.path.join(base_dir, "app", "data", "togle_data.pdf"))
+    return render_template_string("""
+    <script>
+      alert("✅ 업데이트가 완료되었습니다!");
+      window.location.href = "{{ url_for('index.index') }}";
+    </script>
+    """)

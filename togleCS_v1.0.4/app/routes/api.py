@@ -353,80 +353,78 @@ def download_excel():
             'error': f"서버 오류 발생: {str(e)}"
         }), 500
 
+from flask import current_app, jsonify, request
 
-# ✅ 스케줄 정보 조회
+# 스케줄 정보 조회
 @api_bp.route('/schedule_info', methods=['GET'])
 @login_required
 def schedule_info():
-    """자동 수집 스케줄 정보 조회"""
     try:
-        from flask import current_app
-        
-        scheduler = current_app.scheduler
+        scheduler = getattr(current_app, 'scheduler', None)
+        if not scheduler:
+            return jsonify({'success': False, 'error': '스케줄러가 초기화되지 않았습니다.'}), 500
+
         job = scheduler.get_job('daily_unanswered_collection')
-        
-        if job:
-            trigger = job.trigger
-            return jsonify({
-                'success': True,
-                'hour': trigger.fields[5].expressions[0].first,  # hour
-                'minute': trigger.fields[6].expressions[0].first  # minute
-            }), 200
+        if job and hasattr(job, 'trigger'):
+            try:
+                hour = getattr(job.trigger.fields[5].expressions[0], 'first', 9)
+                minute = getattr(job.trigger.fields[6].expressions[0], 'first', 0)
+            except Exception:
+                hour, minute = 9, 0
+            return jsonify({'success': True, 'hour': hour, 'minute': minute}), 200
         else:
-            return jsonify({
-                'success': True,
-                'hour': 9,
-                'minute': 0
-            }), 200
-            
+            return jsonify({'success': True, 'hour': 9, 'minute': 0}), 200
+
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# ✅ 스케줄 업데이트
+# 스케줄 업데이트
 @api_bp.route('/update_schedule', methods=['POST'])
 @login_required
 def update_schedule():
-    """자동 수집 시간 변경"""
+    import traceback
     try:
-        from flask import current_app
-        
-        data = request.json
-        hour = data.get('hour', 9)
-        minute = data.get('minute', 0)
-        
-        scheduler = current_app.scheduler
-        
+        data = request.json or {}
+        hour = int(data.get('hour', 9))
+        minute = int(data.get('minute', 0))
+
+        scheduler = getattr(current_app, 'scheduler', None)
+        if not scheduler:
+            return jsonify({'success': False, 'error': '스케줄러가 초기화되지 않았습니다.'}), 500
+
         # 기존 작업 제거
         try:
             scheduler.remove_job('daily_unanswered_collection')
-        except:
+        except Exception:
             pass
-        
-        # 새 작업 추가
+
         from app import auto_open_togle_prompt
+
+        # 별도 함수 정의: APScheduler 스레드에서도 Flask 컨텍스트 사용
+        def schedule_task(app):
+            with app.app_context():
+                auto_open_togle_prompt(app)
+
         scheduler.add_job(
-            lambda: auto_open_togle_prompt(current_app),
+            schedule_task,
+            args=[current_app._get_current_object()],
             trigger="cron",
             hour=hour,
             minute=minute,
             id="daily_unanswered_collection",
             replace_existing=True,
         )
-        
+
         return jsonify({
             'success': True,
             'message': f'스케줄이 {hour:02d}:{minute:02d}로 변경되었습니다.'
         }), 200
-        
+
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ✅ 미답변 문의 가져오기 (수동 크롤링)

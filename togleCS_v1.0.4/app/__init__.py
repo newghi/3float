@@ -77,25 +77,33 @@ def safe_shutdown_scheduler(scheduler):
 # ==========================
 # 자동 수집 함수
 # ==========================
+from app.drivers.chromedriver import set_chromedriver
+
 def auto_open_togle_prompt(app):
-    """미답변 문의 자동 수집"""
+    """미답변 문의 자동 수집 + 전체 업데이트"""
     global unanswered_data
     with app.app_context():
+        driver = set_chromedriver()
         try:
             logger.info("🚀 자동 수집 시작: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             from app.services.togleService import get_unanswered_list
-
             unanswered_list = get_unanswered_list()
             unanswered_data = unanswered_list
-
             logger.info(f"✅ 미답변 {len(unanswered_list)}개 수집 완료")
 
+            # ✅ DB 저장
             try:
                 from app.models import save_unanswered_to_db
                 save_unanswered_to_db(unanswered_list)
                 logger.info(f"✅ DB 저장 완료: {len(unanswered_list)}개")
             except Exception as e:
                 logger.warning(f"⚠️ DB 저장 실패: {e}")
+
+            # ✅ 전체 업데이트 함수 직접 호출
+            from app.routes.togle import togle_all_update
+            with app.test_request_context(method='POST'):
+                togle_all_update()
+                logger.info("✅ all_update() 자동 실행 완료")
 
         except Exception as e:
             logger.error(f"❌ 자동 수집 중 오류: {e}", exc_info=True)
@@ -144,7 +152,7 @@ def log_event(event):
 # ==========================
 # Flask 앱 생성
 # ==========================
-def create_app(init_scheduler=False):
+def create_app(init_scheduler=True):
     """Flask 앱 생성 및 초기화"""
     app = Flask(__name__)
     app.secret_key = "12345"

@@ -221,7 +221,7 @@ async function fetchUnanswered() {
                 // 미답변 문의 데이터를 화면에 렌더링
                 inquiries = data.qas;  // 전역 변수에 데이터 저장
                 renderInquiries();  // 화면에 데이터 렌더링
-
+                updateUnansweredCount();    // 갯수 업데이트
                 showMessage('success', `✅ ${data.qas.length}개 미답변 문의를 가져왔습니다!`);
             } else {
                 inquiries = [];  // 데이터 없을 경우 빈 배열로 초기화
@@ -235,6 +235,13 @@ async function fetchUnanswered() {
     } catch (error) {
         showMessage('error', '❌ 가져오기 실패: ' + error.message);
     }
+}
+
+// 미답변 문의 수 갱신 함수
+function updateUnansweredCount() {
+    const countEl = document.getElementById('unanswered-count');
+    if (!countEl) return;
+    countEl.textContent = `${inquiries.length}개`;
 }
 
 // 엑셀 다운로드
