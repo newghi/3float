@@ -384,6 +384,7 @@ from datetime import datetime, timedelta
 # 전체 문의 내역 업데이트
 def togle_all_update_internal(formData, driver=None):
     """전체 문의 내역 업데이트"""
+    import os
     print(f"🗒️ 내부 호출 formData: {formData}")
     
     # ✅ driver가 없으면 새로 생성
@@ -401,15 +402,23 @@ def togle_all_update_internal(formData, driver=None):
         send_progress("data_collect", f"✅ {len(update_list)}개 데이터 수집 완료", "completed")
         
         base_dir = get_data_dir()
+        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+        pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
 
         # 2. 엑셀 파일 업데이트
         send_progress("excel_update", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
         append_unique_to_excel(
             data_list=update_list,
             filename="togle_data.xlsx",
-            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
+            filepath=excel_path,
             col_mapping={
-                # 기존 col_mapping 유지
+                "q_shopping_mall": "쇼핑몰",
+                "q_type": "유형",
+                "q_date": "문의일",
+                "q_answered": "답변여부",
+                "q_writer": "작성자",
+                "q_question": "문의내용",
+                "q_answer": "답변"
             },
             sheetname="전체",
             key_fields=["q_date"],
@@ -420,18 +429,12 @@ def togle_all_update_internal(formData, driver=None):
         # 3. PDF 변환
         send_progress("pdf_convert", "📄 PDF 파일을 생성하고 있습니다...", "in_progress")
         excel_to_pdf(
-            filepath=os.path.join(base_dir, "app", "data", "togle_data.xlsx"),
-            output_path=os.path.join(base_dir, "app", "data", "togle_data.pdf"),
+            filepath=excel_path,
+            output_path=pdf_path,
             source_sheet="전체",
-            columns_order=[
-                # 기존 columns_order 유지
-            ],
-            small_headers=[
-                # 기존 small_headers 유지
-            ],
-            big_headers=(
-                # 기존 big_headers 유지
-            ),
+            columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+            small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+            big_headers=("문의내용","답변"),
             orientation="landscape",
             repeat_header=True
         )
@@ -439,7 +442,7 @@ def togle_all_update_internal(formData, driver=None):
 
         # 4. 노트북LM 업데이트
         send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
-        notebookLM_update(filepath=os.path.join(base_dir, "app", "data", "togle_data.pdf"))
+        notebookLM_update(filepath=pdf_path)
         send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
         
         print("✅ togle_all_update_internal 완료")
@@ -458,6 +461,7 @@ def togle_all_update_internal(formData, driver=None):
                 print("✅ 크롬 드라이버 종료 (togle_all_update_internal)")
             except Exception as e:
                 print(f"❌ 드라이버 종료 오류: {e}")
+
 
 
 @togle_bp.route('/api/scheduler/progress')

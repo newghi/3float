@@ -689,7 +689,7 @@ def send_reply_selenium(title, content):
 def updateTogleDataSchduler(formData, driver):
 
     # togle 문의글 페이지 접속 매크로
-    togle_macro(driver)
+    # togle_macro(driver)
 
     # '문의 수집' 버튼 누르기
     collectionButtonOn(driver)
