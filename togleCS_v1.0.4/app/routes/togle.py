@@ -404,6 +404,14 @@ def togle_all_update_internal(formData, driver=None):
         base_dir = get_data_dir()
         excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
         pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+        base_dir = get_data_dir()
+        print("💾 실제 base_dir:", base_dir)
+
+        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+        pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+
+        print("📄 Excel 경로:", excel_path)
+        print("📄 PDF 경로:", pdf_path)
 
         # 2. 엑셀 파일 업데이트
         send_progress("excel_update", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
