@@ -375,7 +375,7 @@ def update_schedule():
 
         scheduler.add_job(
             schedule_task,
-            args=[current_app._get_current_object()],
+            args=[current_app.app_context()],
             trigger="cron",
             hour=hour,
             minute=minute,
@@ -406,22 +406,29 @@ def fetch_unanswered():
         from app.services.togleService import get_unanswered_list
         from app.models import save_unanswered_to_db
         from flask import current_app
+        from app.__init__ import set_task_status
 
         # 현재 앱 객체를 가져와 스레드로 전달
-        app = current_app._get_current_object()
+        app = current_app.app_context()
 
         def background_fetch(app):
             try:
-                with app.app_context():  # 스레드 안에서 앱 컨텍스트 활성화
+                with app.app_context():
+                    set_task_status('start', '크롤링 시작')
+                    
                     unanswered_list = get_unanswered_list()
+                    set_task_status('collect', '미답변 문의 수집 중')
                     
                     if unanswered_list:
                         save_unanswered_to_db(unanswered_list)
-                        print(f"✅ 크롤링 완료 및 DB 저장: {len(unanswered_list)}개")
+                        set_task_status('db_save_done', f'{len(unanswered_list)}개 저장 완료')
                     else:
-                        print("ℹ️ 크롤링 결과 없음")
+                        set_task_status('done', '크롤링 결과 없음')
+                        
+                    set_task_status('done', '작업 완료')
             except Exception as e:
-                print(f"❌ 크롤링 실패: {e}")
+                set_task_status('error', str(e))
+
 
         thread = threading.Thread(target=background_fetch, args=(app,), daemon=True)
         thread.start()

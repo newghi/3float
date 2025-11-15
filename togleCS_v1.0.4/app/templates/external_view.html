@@ -226,7 +226,7 @@
     <!-- 답변 작성된 문의 영역 -->
     <div class="content-section">
         <div class="section-header">
-            <span class="section-title">✅ 답변 작성됨</span>
+            <span class="section-title">✅ 자동 답변 작성됨</span>
             <span class="section-count" id="answered-section-count">0개</span>
         </div>
         <div class="inquiry-scroll" id="answered-content"></div>
@@ -279,7 +279,7 @@ function cancelAllTasks() {
     // AbortController로 fetch 요청 취소
     if (currentAbortController) {
         currentAbortController.abort();
-        currentAbortController = null;
+        // currentAbortController = null;
     }
     
     // 로딩 오버레이 숨기기
@@ -379,7 +379,7 @@ function hideLoading() {
     const overlay = document.getElementById("loading-overlay");
     overlay.style.display = "none";
     isTaskRunning = false;
-    currentAbortController = null;
+    // currentAbortController = null;
     
     // 이벤트 리스너 제거
     const cancelNotice = overlay.querySelector('.cancel-notice');
@@ -391,84 +391,51 @@ function hideLoading() {
 async function pollStatus() {
     try {
         const res = await fetch('/togle/task_status');
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        
         const data = await res.json();
-        console.log('📡 작업 상태:', data);
         
         const msgEl = document.getElementById('message');
-        const step = data.step || 'idle';
-        const message = data.message || '';
         
-        // 이벤트별 처리
-        switch(step) {
-            case 'done':
-                // ✅ 작업 완료
-                hideLoading();
-                if (message) {
-                    msgEl.innerHTML = `<div class="success">${message}</div>`;
-                }
-                setTimeout(() => {
-                    msgEl.innerHTML = '';
-                    loadFromDB(); // DB 새로고침
-                }, 3000);
-                setTimeout(pollStatus, 10000); // 10초 후 다시 확인
-                break;
-                
-            case 'error':
-            case 'db_save_error':
-                // ❌ 오류 발생
-                hideLoading();
-                if (message) {
-                    msgEl.innerHTML = `<div class="error">${message}</div>`;
-                }
-                setTimeout(pollStatus, 10000);
-                break;
-                
-            case 'idle':
-            case '':
-                // 💤 대기 상태
-                hideLoading();
+        // 작업 상태에 따라 로딩 표시/숨김
+        if (data.step && data.step !== 'done' && data.step !== 'idle') {
+            // 작업 진행 중일 때만 로딩 표시
+            if (!isTaskRunning) {
+                showLoading();
+            }
+            
+            if (data.message) {
+                msgEl.innerHTML = `<div class="info">${data.message}</div>`;
+            }
+            
+            if (data.excel_last_updated) {
+                document.getElementById('excel-update').textContent = data.excel_last_updated;
+            }
+            
+            // 5초 후 다시 확인
+            setTimeout(pollStatus, 5000);
+        } else if (data.step === 'done') {
+            // 작업 완료
+            hideLoading();
+            msgEl.innerHTML = '<div class="success">✅ 모든 작업 완료! 스케줄러 최신화 완료</div>';
+            setTimeout(() => {
                 msgEl.innerHTML = '';
-                setTimeout(pollStatus, 30000); // 30초마다 확인
-                break;
-                
-            case 'start':
-            case 'collect':
-            case 'notebook_answer':
-            case 'db_save':
-                // 🔄 작업 진행 중
-                if (!isTaskRunning) {
-                    showLoading();
-                }
-                if (message) {
-                    msgEl.innerHTML = `<div class="info">${message}</div>`;
-                }
-                setTimeout(pollStatus, 5000); // 5초마다 확인
-                break;
-                
-            case 'collect_done':
-            case 'notebook_answer_done':
-            case 'db_save_done':
-                // ✅ 중간 단계 완료 (로딩은 유지)
-                if (message) {
-                    msgEl.innerHTML = `<div class="success">${message}</div>`;
-                }
-                setTimeout(pollStatus, 2000); // 2초 후 다음 상태 확인
-                break;
-                
-            default:
-                // 기타 상태
-                setTimeout(pollStatus, 5000);
-                break;
+                loadFromDB(); // 작업 완료 후 자동 새로고침
+            }, 3000);
+        } else {
+            // idle 상태 (작업 없음)
+            hideLoading();
+            
+            if (data.excel_last_updated) {
+                document.getElementById('excel-update').textContent = data.excel_last_updated;
+            }
+            
+            // idle 상태에서는 30초마다만 확인
+            setTimeout(pollStatus, 30000);
         }
-        
     } catch (err) {
-        console.error('❌ 상태 폴링 오류:', err);
-        hideLoading();
-        setTimeout(pollStatus, 30000); // 오류 시 30초 후 재시도
+        console.error('상태 폴링 오류:', err);
+        hideLoading(); // 오류 시 로딩 숨김
+        // 오류 시 30초 후 재시도
+        setTimeout(pollStatus, 30000);
     }
 }
 
@@ -538,8 +505,7 @@ async function fetchUnanswered() {
         showLoading();
         
         currentAbortController = new AbortController();
-        const res = await fetch(`${SERVER_URL}/api/fetch_unanswered`, {  // 수정: 올바른 API 엔드포인트
-            method: 'POST',
+        const res = await fetch(`${SERVER_URL}/togle/get_unanswered`, {
             signal: currentAbortController.signal
         });
         
@@ -687,7 +653,6 @@ async function autoRequestLoadQnA() {
 
 
 // 화면에 문의 목록 표시
-// 미답변/답변 분리 렌더링
 function renderSeparatedInquiries() {
     const unanswered = inquiries.filter(item => !item.q_answer_title || !item.q_answer_content);
     const answered = inquiries.filter(item => item.q_answer_title && item.q_answer_content);

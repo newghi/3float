@@ -109,7 +109,17 @@ def send_progress(step, message, status="in_progress"):
 
 def update_progress(step, message, status="in_progress"):
     """진행 상황 업데이트 (이벤트 기반)"""
-    send_progress_func(step, message, status)
+    send_progress(step, message, status)
+
+
+def set_task_status(step, message, status='running'):
+    global task_progress
+    task_progress = {
+        'step': step,
+        'message': message,
+        'status': status,
+        'timestamp': datetime.now().isoformat()
+    }
 
 def get_send():
     """현재 진행 상황 반환"""
