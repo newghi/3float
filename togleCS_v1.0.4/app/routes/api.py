@@ -106,83 +106,49 @@ def update_batch():
 
 
 @api_bp.route('/submit_answers', methods=['POST'])
-@login_required  # ✅ 로그인 체크 추가
+@login_required
 def submit_answers():
     """
-    ✅ 외부에서 답변 일괄 전송 → 서버 PC에서 자동으로 Togle에 업로드
-    POST /api/submit_answers
-    Body: {
-        "answers": [
-            {
-                "q_question": "질문 내용",
-                "q_answer_title": "답변 제목",
-                "q_answer_content": "답변 내용"
-            }
-        ]
-    }
-    
-    ⚠️ 주의: 이 API는 서버 PC에서 Selenium을 실행합니다 (시간 소요)
+    답변을 Togle에 전송하고 is_submitted=True로 업데이트
     """
     try:
-        # ✅ 서버 PC에서 백그라운드로 실행
+        from app.models import mark_inquiries_as_submitted
         import threading
-        from app.services.togleService import upload_togle_answer
         
         answers = request.json.get('answers', [])
         
         if not answers:
-            return jsonify({
-                'success': False,
-                'error': '전송할 답변이 없습니다'
-            }), 400
+            return jsonify({'success': False, 'error': '전송할 답변이 없습니다.'}), 400
         
-        print(f"📤 외부 요청으로 {len(answers)}개 답변 전송 시작...")
-        
-        # ✅ 별도 스레드에서 실행 (API 응답 속도 개선)
-        def background_upload():
+        def background_submit():
             try:
-                unmatched = upload_togle_answer(answers)
+                from flask import current_app
+                from app.services.togleService import submit_answers_to_togle
                 
-                # 성공한 항목들을 DB에서 제출 완료 표시
-                if len(unmatched) < len(answers):
-                    submitted_questions = [
-                        ans['q_question'] for ans in answers 
-                        if ans not in unmatched
-                    ]
+                with current_app.app_context():
+                    # Togle에 답변 전송
+                    success_ids = submit_answers_to_togle(answers)
                     
-                    # 제출 완료된 항목의 ID 찾기
-                    submitted_ids = []
-                    for q_text in submitted_questions:
-                        inquiry = get_inquiry_by_question(q_text)
-                        if inquiry:
-                            submitted_ids.append(inquiry.id)
-                    
-                    if submitted_ids:
-                        mark_as_submitted(submitted_ids)
-                
-                print(f"✅ 전송 완료: {len(answers) - len(unmatched)}/{len(answers)}개 성공")
-                
+                    if success_ids:
+                        # 전송 성공한 항목만 is_submitted=True 처리
+                        mark_inquiries_as_submitted(success_ids)
+                        print(f"✅ {len(success_ids)}개 답변 전송 완료 및 상태 업데이트")
+                    else:
+                        print("❌ 전송 실패")
             except Exception as e:
                 print(f"❌ 백그라운드 전송 실패: {e}")
-                import traceback
-                traceback.print_exc()
         
-        # 백그라운드 실행
-        thread = threading.Thread(target=background_upload, daemon=True)
+        # 백그라운드 스레드로 전송
+        thread = threading.Thread(target=background_submit, daemon=True)
         thread.start()
         
-        # 즉시 응답 (실제 전송은 백그라운드에서 진행)
         return jsonify({
             'success': True,
-            'message': f'{len(answers)}개 답변 전송을 시작했습니다. 서버에서 처리 중입니다.',
-            'total': len(answers)
-        }), 202  # 202 Accepted
+            'message': f'{len(answers)}개 답변 전송을 시작했습니다.'
+        }), 202
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @api_bp.route('/submit_status', methods=['GET'])
@@ -431,47 +397,38 @@ def update_schedule():
 @api_bp.route('/fetch_unanswered', methods=['POST'])
 @login_required
 def fetch_unanswered():
-    """서버에서 미답변 문의 크롤링"""
+    """
+    서버에서 미답변 문의 크롤링 후 DB에 저장
+    기존 데이터는 최신화
+    """
     try:
         import threading
         from app.services.togleService import get_unanswered_list
         from app.models import save_unanswered_to_db
         from flask import current_app
-        from selenium.common.exceptions import TimeoutException
-        from selenium.webdriver.common.by import By
-        from selenium.webdriver.support.ui import WebDriverWait
-        from selenium.webdriver.support import expected_conditions as EC
 
-        def background_fetch():
+        # 현재 앱 객체를 가져와 스레드로 전달
+        app = current_app._get_current_object()
+
+        def background_fetch(app):
             try:
-                # 현재 앱 컨텍스트 사용
-                with current_app.app_context():
+                with app.app_context():  # 스레드 안에서 앱 컨텍스트 활성화
                     unanswered_list = get_unanswered_list()
                     
-                    safe_list = []
-                    for idx, item in enumerate(unanswered_list, start=1):
-                        try:
-                            # Selenium 페이지 이동 안전하게 처리
-                            WebDriverWait(item['driver'], 10).until(
-                                EC.presence_of_element_located((By.XPATH, f".//span[@class='block' and text()='{idx}']"))
-                            )
-                            safe_list.append(item)
-                        except TimeoutException:
-                            print(f"❌ 페이지 {idx} 이동 실패, 해당 문의는 스킵합니다.")
-
-                    # 안전하게 DB 저장
-                    save_unanswered_to_db(safe_list)
-                    print(f"✅ 수동 크롤링 완료: {len(safe_list)}개")
+                    if unanswered_list:
+                        save_unanswered_to_db(unanswered_list)
+                        print(f"✅ 크롤링 완료 및 DB 저장: {len(unanswered_list)}개")
+                    else:
+                        print("ℹ️ 크롤링 결과 없음")
             except Exception as e:
-                print(f"❌ 수동 크롤링 실패: {e}")
+                print(f"❌ 크롤링 실패: {e}")
 
-        # 백그라운드 스레드 실행
-        thread = threading.Thread(target=background_fetch, daemon=True)
+        thread = threading.Thread(target=background_fetch, args=(app,), daemon=True)
         thread.start()
 
         return jsonify({
             'success': True,
-            'message': '미답변 문의 수집을 시작했습니다. 잠시 후 새로고침하세요.'
+            'message': '미답변 문의 수집을 시작했습니다. 1-3분 후 새로고침하세요.'
         }), 202
 
     except Exception as e:
@@ -526,42 +483,56 @@ def update_program():
 
 # save_unanswered API
 @api_bp.route('/save_unanswered', methods=['POST'])
+@login_required
 def save_unanswered():
+    """
+    미답변 문의 저장/업데이트
+    동일 문의는 최신 데이터로 통합
+    """
     try:
-        # 요청으로부터 unanswered_list를 가져옵니다.
+        from app.models import save_unanswered_to_db
+        
         unanswered_list = request.json.get('unanswered_list', [])
         
         if not unanswered_list:
             return jsonify({'success': False, 'error': '빈 목록입니다.'}), 400
 
-        # 수정된 항목만 저장
         success = save_unanswered_to_db(unanswered_list)
         
         if success:
-            return jsonify({'success': True, 'message': f'{len(unanswered_list)}개 항목 수정 완료'}), 200
+            return jsonify({
+                'success': True, 
+                'message': f'{len(unanswered_list)}개 항목 저장 완료'
+            }), 200
         else:
-            return jsonify({'success': False, 'error': '수정된 항목이 없습니다.'}), 404
+            return jsonify({'success': False, 'error': '저장 실패'}), 500
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # get_unanswered_from_db API
 @api_bp.route('/get_unanswered_from_db', methods=['GET'])
 def get_unanswered_from_db():
+    """
+    DB에서 is_submitted=False인 모든 문의 조회
+    """
     try:
-        unanswered_inquiries = UnansweredInquiry.query.filter_by(is_submitted=False).all()
-        unanswered_list = [{
-            'q_shopping_mall': item.q_shopping_mall,
-            'q_type': item.q_type,
-            'q_date': item.q_date,
-            'q_writer': item.q_writer,
-            'q_question': item.q_question,
-            'q_answer_title': item.q_answer_title,
-            'q_answer_content': item.q_answer_content
-        } for item in unanswered_inquiries]
+        from app.models import get_all_unanswered_from_db
         
-        if not unanswered_list:
-            return jsonify({'success': True, 'message': '미답변 목록이 없습니다.'}), 200
+        qas = get_all_unanswered_from_db()
         
-        return jsonify({'success': True, 'qas': unanswered_list}), 200
+        print(f"📊 API 응답 데이터: {len(qas)}개")  # 디버그 로그
+        
+        return jsonify({
+            'success': True,
+            'qas': qas,
+            'count': len(qas)
+        }), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"❌ API 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'qas': []
+        }), 500

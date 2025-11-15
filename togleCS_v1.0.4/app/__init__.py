@@ -78,19 +78,24 @@ def safe_shutdown_scheduler(scheduler):
 # 자동 수집 함수
 # ==========================
 from app.drivers.chromedriver import set_chromedriver
+from datetime import datetime
+import threading
+import time
 import queue
 
 # 전역 큐 - 진행 상황을 저장
 progress_queue = queue.Queue()
+
+# 전역 진행 상태
 current_progress = {
-    "step": "",
+    "step": "idle",
     "status": "idle",
     "message": "",
     "timestamp": ""
 }
 
 def send_progress(step, message, status="in_progress"):
-    """진행 상황을 큐에 추가"""
+    """진행 상황을 업데이트하고 큐에 추가"""
     global current_progress
     progress_data = {
         "step": step,
@@ -102,67 +107,85 @@ def send_progress(step, message, status="in_progress"):
     progress_queue.put(progress_data)
     logger.info(f"📡 Progress: {message}")
 
+def update_progress(step, message, status="in_progress"):
+    """진행 상황 업데이트 (이벤트 기반)"""
+    send_progress_func(step, message, status)
+
+def get_send():
+    """현재 진행 상황 반환"""
+    global current_progress
+    return current_progress.copy()
+
 def auto_open_togle_prompt(app):
-    """미답변 문의 자동 수집 + 전체 업데이트 (7일 단위)"""
+    """미답변 문의 자동 수집 (이벤트 기반)"""
     global unanswered_data
+    
     with app.app_context():
-        driver = set_chromedriver()
+        driver = None
         try:
-            send_progress("start", "🚀 자동 수집 작업을 시작합니다...", "in_progress")
+            driver = set_chromedriver()
+            
+            # 🚀 작업 시작
+            update_progress("start", "🚀 자동 수집 작업을 시작합니다...", "in_progress")
             logger.info("🚀 자동 수집 시작: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             # 1️⃣ 미답변 문의글 수집
-            send_progress("collect", "📥 미답변 문의글을 수집하고 있습니다...", "in_progress")
+            update_progress("collect", "📥 미답변 문의글을 수집하고 있습니다...", "in_progress")
             from app.services.togleService import get_unanswered_list2
             unanswered_list = get_unanswered_list2(driver)
             unanswered_data = unanswered_list
             logger.info(f"✅ 미답변 {len(unanswered_list)}개 수집 완료")
-            send_progress("collect", f"✅ 미답변 문의 {len(unanswered_list)}개 수집 완료", "completed")
+            update_progress("collect_done", f"✅ 미답변 문의 {len(unanswered_list)}개 수집 완료", "completed")
+            time.sleep(1)  # 이벤트 간 간격
 
             # 2️⃣ 노트북LM 답변 생성
-            send_progress("notebook_answer", "🤖 노트북LM 답변을 생성하고 있습니다...", "in_progress")
+            update_progress("notebook_answer", "🤖 노트북LM 답변을 생성하고 있습니다...", "in_progress")
             from app.services.togleService import get_notebookAnswer
             notebookAnswer_list = get_notebookAnswer(unanswered_list)
             logger.info(f"✅ 노트북LM 답변 생성 완료: {len(notebookAnswer_list)}개")
-            send_progress("notebook_answer", f"✅ 노트북LM 답변 {len(notebookAnswer_list)}개 생성 완료", "completed")
+            update_progress("notebook_answer_done", f"✅ 노트북LM 답변 {len(notebookAnswer_list)}개 생성 완료", "completed")
+            time.sleep(1)
 
             # 3️⃣ DB 저장
-            send_progress("db_save", "💾 데이터베이스에 저장하고 있습니다...", "in_progress")
+            update_progress("db_save", "💾 데이터베이스에 저장하고 있습니다...", "in_progress")
             from app.models import save_unanswered_to_db
             db_saved = save_unanswered_to_db(notebookAnswer_list)
+            
             if db_saved:
                 logger.info(f"✅ DB 저장 완료 (답변 포함): {len(notebookAnswer_list)}개")
-                send_progress("db_save", f"✅ DB 저장 완료 ({len(notebookAnswer_list)}개)", "completed")
+                update_progress("db_save_done", f"✅ DB 저장 완료 ({len(notebookAnswer_list)}개)", "completed")
             else:
                 logger.warning("❌ DB 저장 실패")
-                send_progress("db_save", "❌ DB 저장 실패", "error") 
+                update_progress("db_save_error", "❌ DB 저장 실패", "error")
+            
+            time.sleep(1)
 
-            # 4️⃣ 전체 업데이트 (엑셀/노트북LM 업데이트)
-            send_progress("excel_update", "📊 엑셀 파일을 업데이트하고 있습니다...", "in_progress")
-            from app.routes.togle import togle_all_update_internal
-            formData = {
-                "mall": "",
-                "q_type": "전체",
-                "start_date": (datetime.today() - timedelta(days=7)).strftime("%Y-%m-%d"),
-                "end_date": datetime.today().strftime("%Y-%m-%d"),
-                "answer_filter": "전체",
-                "include_deleted": "true",
-                "query": ""
-            }
-            togle_all_update_internal(formData, driver=driver) # X 오류 발생: Message: Stacktrace Symbols not available. Dumpoing unresolved backtrace :012a4093
-            logger.info("✅ all_update_internal() 자동 실행 완료")
-            send_progress("excel_update", "✅ 엑셀 파일 업데이트 완료", "completed")
-
-            # 5️⃣ 완료
-            send_progress("complete", "🎉 모든 작업이 완료되었습니다.", "completed")
+            # 4️⃣ 완료
+            update_progress("done", "🎉 모든 작업이 완료되었습니다!", "completed")
+            logger.info("✅ 자동 수집 작업 완료")
 
         except Exception as e:
             logger.error(f"❌ 자동 수집 중 오류: {e}", exc_info=True)
-            send_progress("error", f"❌ 오류 발생: {str(e)}", "error") #'NoneType' object has no attribute 'get'
+            update_progress("error", f"❌ 오류 발생: {str(e)}", "error")
+            
         finally:
+            # 드라이버 종료
             if driver:
-                driver.quit()
-                logger.info("✅ 크롬 드라이버 종료 완료")
+                try:
+                    driver.quit()
+                    logger.info("✅ 크롬 드라이버 종료 완료")
+                except Exception as quit_error:
+                    logger.error(f"⚠️ 드라이버 종료 실패: {quit_error}")
+            
+            # 10초 후 idle 상태로 전환
+            def reset_to_idle():
+                time.sleep(10)
+                global send_progress
+                if send_progress["step"] in ["done", "error"]:
+                    update_progress("idle", "", "idle")
+                    logger.info("🔄 작업 상태를 idle로 리셋")
+            
+            threading.Thread(target=reset_to_idle, daemon=True).start()
 
 
 # def auto_open_togle_prompt(app):
@@ -205,13 +228,13 @@ def start_scheduler(app):
     )
 
     # 🧪 테스트용: 10초 후 1회 실행 (주석 필요 시 해제)
-    scheduler.add_job(
-        lambda: auto_open_togle_prompt(app),
-        trigger="date",
-        run_date=datetime.now() + timedelta(seconds=10),
-        id="test_collection_once",
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     lambda: auto_open_togle_prompt(app),
+    #     trigger="date",
+    #     run_date=datetime.now() + timedelta(seconds=10),
+    #     id="test_collection_once",
+    #     replace_existing=True,
+    # )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")

@@ -899,3 +899,34 @@ def append_category_id(data_list):
             item["category_id"] = 5  # 기타 카테고리로 분류
 
     return data_list
+
+def submit_answers_to_togle(answers):
+    """
+    답변을 Togle에 실제 전송
+    전송 성공한 문의 ID 리스트 반환
+    """
+    driver = set_chromedriver()
+    success_ids = []
+    
+    try:
+        for answer in answers:
+            try:
+                # Togle 답변 등록 로직
+                # ... (기존 답변 등록 코드)
+                
+                # 성공 시 ID 수집
+                if answer.get('id'):
+                    success_ids.append(answer['id'])
+                    
+            except Exception as e:
+                print(f"❌ 답변 전송 실패: {answer.get('q_writer')} - {e}")
+                continue
+        
+        return success_ids
+        
+    except Exception as e:
+        print(f"❌ 전송 프로세스 실패: {e}")
+        return success_ids
+    finally:
+        if driver:
+            driver.quit()
