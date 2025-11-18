@@ -368,14 +368,12 @@ def update_schedule():
 
         from app import auto_open_togle_prompt
 
-        # 별도 함수 정의: APScheduler 스레드에서도 Flask 컨텍스트 사용
-        def schedule_task(app):
-            with app.app_context():
-                auto_open_togle_prompt(app)
+        def schedule_task():
+            from app import auto_open_togle_prompt
+            auto_open_togle_prompt(current_app)
 
         scheduler.add_job(
             schedule_task,
-            args=[current_app.app_context()],
             trigger="cron",
             hour=hour,
             minute=minute,

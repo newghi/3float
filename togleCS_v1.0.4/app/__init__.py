@@ -108,7 +108,7 @@ def send_progress(step, message, status="in_progress"):
     logger.info(f"📡 Progress: {message}")
 
 def update_progress(step, message, status="in_progress"):
-    """진행 상황 업데이트 (이벤트 기반)"""
+    print(f"[Progress] step={step}, status={status}, message={message}")
     send_progress(step, message, status)
 
 
@@ -126,6 +126,11 @@ def get_send():
     global current_progress
     return current_progress.copy()
 
+from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update
+from app.utils.paths import get_data_dir
+from app.services.fileService import append_unique_to_excel, excel_to_pdf
+from app.models import save_unanswered_to_db
+
 def auto_open_togle_prompt(app):
     """미답변 문의 자동 수집 (이벤트 기반)"""
     global unanswered_data
@@ -133,32 +138,74 @@ def auto_open_togle_prompt(app):
     with app.app_context():
         driver = None
         try:
+            # 1. 드라이버 설정
             driver = set_chromedriver()
             
             # 🚀 작업 시작
             update_progress("start", "🚀 자동 수집 작업을 시작합니다...", "in_progress")
             logger.info("🚀 자동 수집 시작: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-            # 1️⃣ 미답변 문의글 수집
+            # 2. 미답변 문의글 수집
             update_progress("collect", "📥 미답변 문의글을 수집하고 있습니다...", "in_progress")
-            from app.services.togleService import get_unanswered_list2
             unanswered_list = get_unanswered_list2(driver)
             unanswered_data = unanswered_list
             logger.info(f"✅ 미답변 {len(unanswered_list)}개 수집 완료")
             update_progress("collect_done", f"✅ 미답변 문의 {len(unanswered_list)}개 수집 완료", "completed")
             time.sleep(1)  # 이벤트 간 간격
 
-            # 2️⃣ 노트북LM 답변 생성
+            # 3. 노트북LM 답변 생성
             update_progress("notebook_answer", "🤖 노트북LM 답변을 생성하고 있습니다...", "in_progress")
-            from app.services.togleService import get_notebookAnswer
             notebookAnswer_list = get_notebookAnswer(unanswered_list)
             logger.info(f"✅ 노트북LM 답변 생성 완료: {len(notebookAnswer_list)}개")
             update_progress("notebook_answer_done", f"✅ 노트북LM 답변 {len(notebookAnswer_list)}개 생성 완료", "completed")
             time.sleep(1)
 
-            # 3️⃣ DB 저장
+            # 4. 엑셀 업데이트 및 PDF 생성
+            update_progress("excel_pdf", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
+            base_dir = get_data_dir()
+            excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+            pdf_path = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+
+            # 엑셀에 데이터를 추가
+            append_unique_to_excel(
+                data_list=unanswered_list,
+                filename="togle_data.xlsx",
+                filepath=excel_path,
+                col_mapping={
+                    "q_shopping_mall": "쇼핑몰",
+                    "q_type": "유형",
+                    "q_date": "문의일",
+                    "q_answered": "답변여부",
+                    "q_writer": "작성자",
+                    "q_question": "문의내용",
+                    "q_answer": "답변"
+                },
+                sheetname="전체",
+                key_fields=["q_date"],
+                sort_by="q_date"
+            )
+
+            # 엑셀을 PDF로 변환
+            excel_to_pdf(
+                filepath=excel_path,
+                output_path=pdf_path,
+                source_sheet="전체",
+                columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+                small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+                big_headers=("문의내용","답변"),
+                orientation="landscape",
+                repeat_header=True
+            )
+            update_progress("excel_pdf_done", "✅ 엑셀 파일 및 PDF 생성 완료", "completed")
+            time.sleep(1)
+
+            # 5. 노트북LM 업데이트
+            send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
+            notebookLM_update(filepath=pdf_path)
+            send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
+
+            # 6. DB 저장
             update_progress("db_save", "💾 데이터베이스에 저장하고 있습니다...", "in_progress")
-            from app.models import save_unanswered_to_db
             db_saved = save_unanswered_to_db(notebookAnswer_list)
             
             if db_saved:
@@ -170,7 +217,7 @@ def auto_open_togle_prompt(app):
             
             time.sleep(1)
 
-            # 4️⃣ 완료
+            # 7. 완료
             update_progress("done", "🎉 모든 작업이 완료되었습니다!", "completed")
             logger.info("✅ 자동 수집 작업 완료")
 
@@ -179,7 +226,7 @@ def auto_open_togle_prompt(app):
             update_progress("error", f"❌ 오류 발생: {str(e)}", "error")
             
         finally:
-            # 드라이버 종료
+            # 8. 드라이버 종료
             if driver:
                 try:
                     driver.quit()
@@ -187,14 +234,13 @@ def auto_open_togle_prompt(app):
                 except Exception as quit_error:
                     logger.error(f"⚠️ 드라이버 종료 실패: {quit_error}")
             
-            # 10초 후 idle 상태로 전환
+            # 9. 10초 후 idle 상태로 전환
             def reset_to_idle():
                 time.sleep(10)
-                global send_progress
-                if send_progress["step"] in ["done", "error"]:
+                # 완료 또는 오류인 경우에만 idle로 변경
+                if current_progress.get("step") in ["done", "error"]:
                     update_progress("idle", "", "idle")
-                    logger.info("🔄 작업 상태를 idle로 리셋")
-            
+
             threading.Thread(target=reset_to_idle, daemon=True).start()
 
 
@@ -227,9 +273,16 @@ def start_scheduler(app):
     scheduler = BackgroundScheduler()
     scheduler.add_listener(log_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
+    from app import auto_open_togle_prompt
+
+    # 안전하게 앱 컨텍스트 열고 호출
+    def scheduled_task():
+        with app.app_context():
+            auto_open_togle_prompt(app)
+
     # 매일 9시 실행
     scheduler.add_job(
-        lambda: auto_open_togle_prompt(app),
+        scheduled_task,
         trigger="cron",
         hour=9,
         minute=0,
@@ -237,19 +290,18 @@ def start_scheduler(app):
         replace_existing=True,
     )
 
-    # 🧪 테스트용: 10초 후 1회 실행 (주석 필요 시 해제)
-    # scheduler.add_job(
-    #     lambda: auto_open_togle_prompt(app),
-    #     trigger="date",
-    #     run_date=datetime.now() + timedelta(seconds=10),
-    #     id="test_collection_once",
-    #     replace_existing=True,
-    # )
+    # 🧪 테스트용: 10초 후 1회 실행
+    scheduler.add_job(
+        scheduled_task,
+        trigger="date",
+        run_date=datetime.now() + timedelta(seconds=10),
+        id="test_collection_once",
+        replace_existing=True,
+    )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")
     return scheduler
-
 
 def log_event(event):
     """스케줄러 이벤트 로그"""
