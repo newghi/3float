@@ -366,11 +366,14 @@ def update_schedule():
         except Exception:
             pass
 
-        from app import auto_open_togle_prompt
+        # 앱 객체를 미리 가져옴
+        app = current_app._get_current_object()
 
         def schedule_task():
             from app import auto_open_togle_prompt
-            auto_open_togle_prompt(current_app)
+            with app.app_context():  # 앱 컨텍스트를 명시적으로 열기
+                auto_open_togle_prompt(app)
+
 
         scheduler.add_job(
             schedule_task,
@@ -389,7 +392,6 @@ def update_schedule():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 # ✅ 미답변 문의 가져오기 (수동 크롤링)
 @api_bp.route('/fetch_unanswered', methods=['POST'])

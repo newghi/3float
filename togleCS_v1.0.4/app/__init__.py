@@ -291,13 +291,13 @@ def start_scheduler(app):
     )
 
     # 🧪 테스트용: 10초 후 1회 실행
-    scheduler.add_job(
-        scheduled_task,
-        trigger="date",
-        run_date=datetime.now() + timedelta(seconds=10),
-        id="test_collection_once",
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     scheduled_task,
+    #     trigger="date",
+    #     run_date=datetime.now() + timedelta(seconds=10),
+    #     id="test_collection_once",
+    #     replace_existing=True,
+    # )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")
