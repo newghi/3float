@@ -72,118 +72,6 @@
         .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
         .time-input { display: flex; gap: 10px; align-items: center; }
         .time-input input { width: 80px; }
-        
-        /* 미답변/답변 분리 레이아웃 */
-        .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .content-section { border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; background: white; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
-        .section-title { font-size: 18px; font-weight: 600; color: #333; }
-        .section-count { background: #2196F3; color: white; padding: 4px 12px; border-radius: 15px; font-size: 14px; }
-
-        /* 스크롤 영역 */
-        .inquiry-scroll { max-height: 600px; overflow-y: auto; padding-right: 10px; }
-        .inquiry-scroll::-webkit-scrollbar { width: 8px; }
-        .inquiry-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        .inquiry-scroll::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-        .inquiry-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
-
-        .inquiry-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateY(-2px); }
-
-        /* 페이지네이션 */
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; }
-        .page-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer; transition: all 0.3s; }
-        .page-btn:hover:not(:disabled) { background: #2196F3; color: white; }
-        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .page-info { color: #666; font-size: 14px; font-weight: 600; }
-
-        .btn-sel { background: #FFEB3B; color: #333; font-weight: 600; }
-        .btn-sel:hover { background: #FDD835; }
-        .info { background: #e3f2fd; color: #0277bd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-
-        /* 로딩 오버레이 */
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; }
-        .spinner { border: 8px solid #f3f3f3; border-top: 8px solid #2196F3; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .item-actions { margin-top: 10px; }
-        .btn-save { background: #4CAF50; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; }
-        .btn-save:hover { background: #45a049; }
-
-        /* 취소 안내 버튼 */
-        .cancel-notice {
-            position: absolute;
-            bottom: 100px;
-            color: white;
-            font-size: 14px;
-            background: rgba(31, 30, 30, 0.9);
-            padding: 15px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.3s;
-            border: 2px solid white;
-            font-weight: 600;
-        }
-
-        .cancel-notice:hover {
-            background: rgb(17, 17, 17);
-            transform: scale(1.05);
-        }
-
-        .cancel-notice:active {
-            transform: scale(0.95);
-        }
-
-        @media (max-width: 768px) {
-            .cancel-notice {
-                bottom: 80px;
-                font-size: 16px;
-                padding: 18px 35px;
-                animation: pulse 2s infinite;
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .progress-step {
-            margin: 5px 0;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .in_progress { background-color: #fffae6; }
-        .completed { background-color: #d4edda; }
-        .error { background-color: #f8d7da; }
-/* 숨김 클래스 */
-.hidden {
-    display: none;
-}
-
-/* 3개 영역 그리드 */
-.content-grid-three {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-/* 2개 영역 그리드 */
-.content-grid-two {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-/* 1개 영역 (전체 너비) */
-.content-grid-one {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-}
     </style>
 </head>
 <body>
@@ -210,7 +98,7 @@
                 <button class="status-btn" onclick="downloadExcel()">⬇️ 다운로드</button>
             </div>
             <div class="status-item">
-                <div class="status-label">📝 전체 문의 수</div>
+                <div class="status-label">📝 미답변 문의 수</div>
                 <div class="status-value" id="unanswered-count">0개</div>
             </div>
         </div>
@@ -229,8 +117,7 @@
         <div class="control-section">
             <h3>📝 답변 관리</h3>
             <div class="controls">
-                <button class="btn-secondary" onclick="loadFromDB()">🔄 새로고침</button>
-                <!-- <button class="btn-secondary" id="refreshBtn" onclick="autoRequestLoadQnA()">🔄 새로고침</button> -->
+                <button class="btn-secondary" id="refreshBtn" onclick="autoRequestLoadQnA()">🔄 새로고침</button>
                 <a href="/togle/external/edit_prompt" class="btn btn-secondary">📝 프롬프트 편집</a>
                 <button class="btn-primary" onclick="saveAll()">💾 전체 저장</button>
                 <button class="btn-sel" style="background-color: yellow;" onclick="submitSelected()">📤 선택 항목만 전송하기</button>
@@ -239,51 +126,12 @@
             </div>
         </div>
         
-<div id="message"></div>
-<div id="loading-overlay" class="loading-overlay">
-    <div class="spinner"></div>
-    <div class="cancel-notice" onclick="cancelAllTasks()">
-        🛑 작업 취소 (클릭 또는 Ctrl+C)
-    </div>
-</div>
-
-<!-- 미답변/전송 실패/전송 성공 영역 -->
-<div id="content-container">
-    <!-- 미답변 문의 영역 (초기 표시) -->
-    <div id="unanswered-section" class="content-grid-one">
-        <div class="content-section">
-            <div class="section-header">
-                <span class="section-title">📭 미답변 문의</span>
-                <span class="section-count" id="unanswered-only-count">0개</span>
-            </div>
-            <div class="inquiry-scroll" id="unanswered-only-content"></div>
-            <div class="pagination" id="unanswered-only-pagination"></div>
+        <div id="message"></div>
+        <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
         </div>
-    </div>
-
-    <!-- 전송 상태 영역 (초기 숨김) -->
-    <div id="submit-status-section" class="content-grid-two hidden">
-        <!-- 전송 실패 내역 -->
-        <div class="content-section">
-            <div class="section-header">
-                <span class="section-title">❌ 전송 실패 내역</span>
-                <span class="section-count" id="failed-section-count">0개</span>
-            </div>
-            <div class="inquiry-scroll" id="failed-content"></div>
-            <div class="pagination" id="failed-pagination"></div>
-        </div>
-        
-        <!-- 전송 성공 내역 -->
-        <div class="content-section">
-            <div class="section-header">
-                <span class="section-title">✅ 전송 성공 내역</span>
-                <span class="section-count" id="success-section-count">0개</span>
-            </div>
-            <div class="inquiry-scroll" id="success-content"></div>
-            <div class="pagination" id="success-pagination"></div>
-        </div>
-    </div>
-</div>
+        <!-- 미답변 문의 목록 표시 영역 -->
+        <div id="content"></div>
 
 
     <!-- 스케줄 설정 모달 -->
@@ -308,60 +156,11 @@
     <script>
 const SERVER_URL = 'http://220.120.14.112:5005';
 let inquiries = [];
-let unansweredOnlyPage = 1; // 미답변 전용 페이지
-let failedPage = 1;          // 전송 실패 페이지
-let successPage = 1;         // 전송 성공 페이지
-const itemsPerPage = 5;
-let isTaskRunning = false;
-let currentAbortController = null;
-let isShowingSubmitStatus = false; // 전송 상태 표시 여부
-
-// Ctrl+C로 작업 중단
-document.addEventListener('keydown', function(e) {
-    // Ctrl+C 감지 (Windows/Linux: ctrlKey, Mac: metaKey)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        if (isTaskRunning) {
-            e.preventDefault(); // 기본 복사 동작 방지
-            cancelAllTasks();
-        }
-    }
-});
-
-// 모든 작업 취소
-function cancelAllTasks() {
-    // AbortController로 fetch 요청 취소
-    if (currentAbortController) {
-        currentAbortController.abort();
-        // currentAbortController = null;
-    }
-    
-    // 로딩 오버레이 숨기기
-    hideLoading();
-    
-    // 작업 상태 플래그 리셋
-    isTaskRunning = false;
-    
-    // 모바일 햅틱 피드백 (지원하는 경우)
-    if (navigator.vibrate) {
-        navigator.vibrate(200);
-    }
-    
-    // 알림 표시
-    showMessage('error', '⚠️ 사용자에 의해 작업이 취소되었습니다.');
-    
-    // 확인 알림창
-    alert('🛑 작업이 취소되었습니다.\n\n실행 중이던 모든 작업이 중단되었습니다.');
-    
-    console.log('작업 취소됨 - 사용자 요청');
-}
 
 window.onload = () => {
+    // autoRequestLoadQnA(); // 자동 로드 비활성화
     loadExcelInfo();
     loadScheduleInfo();
-    // loadFromDB(); // 페이지 로드 시 DB에서 자동 데이터 불러오기
-    setTimeout(() => {
-        pollStatus();
-    }, 1000);
 };
 
 // 엑셀 정보 로드
@@ -376,6 +175,7 @@ async function loadExcelInfo() {
         document.getElementById('excel-update').textContent = '로드 실패';
     }
 }
+
 // 스케줄 정보 로드
 async function loadScheduleInfo() {
     try {
@@ -410,91 +210,29 @@ async function rebootProgram() {
 }
 
 function showLoading() {
-    const overlay = document.getElementById("loading-overlay");
-    overlay.style.display = "flex";
-    isTaskRunning = true;
-    
-    // 모바일 터치 이벤트 추가
-    const cancelNotice = overlay.querySelector('.cancel-notice');
-    if (cancelNotice) {
-        // 터치 이벤트 (모바일)
-        cancelNotice.addEventListener('touchstart', handleCancelTouch, { passive: false });
-    }
-}
-
-// 터치 이벤트 핸들러
-function handleCancelTouch(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    cancelAllTasks();
+  document.getElementById("loading-overlay").style.display = "flex";
 }
 function hideLoading() {
-    const overlay = document.getElementById("loading-overlay");
-    overlay.style.display = "none";
-    isTaskRunning = false;
-    // currentAbortController = null;
-    
-    // 이벤트 리스너 제거
-    const cancelNotice = overlay.querySelector('.cancel-notice');
-    if (cancelNotice) {
-        cancelNotice.removeEventListener('touchstart', handleCancelTouch);
-    }
+  document.getElementById("loading-overlay").style.display = "none";
 }
 
 async function pollStatus() {
-    try {
-        const res = await fetch('/togle/task_status');
-        const data = await res.json();
-        
-        const msgEl = document.getElementById('message');
-        
-        // 작업 상태에 따라 로딩 표시/숨김
-        if (data.step && data.step !== 'done' && data.step !== 'idle') {
-            // 작업 진행 중일 때만 로딩 표시
-            if (!isTaskRunning) {
-                showLoading();
-            }
-            
-            if (data.message) {
-                msgEl.innerHTML = `<div class="info">${data.message}</div>`;
-            }
-            
-            if (data.excel_last_updated) {
-                document.getElementById('excel-update').textContent = data.excel_last_updated;
-            }
-            
-            // 5초 후 다시 확인
-            setTimeout(pollStatus, 5000);
-        } else if (data.step === 'done') {
-            // 작업 완료
-            hideLoading();
-            msgEl.innerHTML = '<div class="success">✅ 모든 작업 완료! 스케줄러 최신화 완료</div>';
-            setTimeout(() => {
-                msgEl.innerHTML = '';
-                loadFromDB(); // 작업 완료 후 자동 새로고침
-            }, 3000);
-        } else {
-            // idle 상태 (작업 없음)
-            hideLoading();
-            
-            if (data.excel_last_updated) {
-                document.getElementById('excel-update').textContent = data.excel_last_updated;
-            }
-            
-            // idle 상태에서는 30초마다만 확인
-            setTimeout(pollStatus, 30000);
-        }
-    } catch (err) {
-        console.error('상태 폴링 오류:', err);
-        hideLoading(); // 오류 시 로딩 숨김
-        // 오류 시 30초 후 재시도
-        setTimeout(pollStatus, 30000);
-    }
-}
+  try {
+    const res = await fetch('/togle/task_status');
+    const data = await res.json();
+    document.getElementById('message').textContent = data.message;
+    document.getElementById('excel-update').textContent = data.excel_last_updated || '정보 없음';
 
-function startStatusPolling() {
-    showLoading();
-    pollStatus();
+    if (data.step !== 'done') {
+      setTimeout(pollStatus, 60000);
+    } else {
+      hideLoading();
+      document.getElementById('message').textContent = '✅ 모든 작업 완료! 스케줄러 최신화 완료';
+    }
+  } catch (err) {
+    console.error(err);
+    setTimeout(pollStatus, 60000);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -502,131 +240,43 @@ document.addEventListener('DOMContentLoaded', () => {
   pollStatus();
 });
 
-socket.onmessage = async (event) => {
-    const data = JSON.parse(event.data);
-
-    updateProgressUI(data); // 기존 상태 표시
-
-    // ⭐ 작업 완료 신호 받음 → 토글 전체 업데이트 실행
-    if (data.step === "done") {
-        console.log("🎉 자동 작업 완료 → 토글 전체 업데이트 실행");
-
-        await callTogleAllUpdate();  // ← 여기에 토글 올 업데이트 호출
-
-        // 그리고 DB에서 최신 데이터 불러오기
-        await loadFromDB();
-    }
-
-    if (data.step === "error") {
-        showMessage('error', '❌ 자동 작업 중 오류 발생!');
-    }
-};
-
-// DB에서 데이터 불러오기 (새로고침)
-async function loadFromDB() {
-    try {
-        showMessage('loading', '📥 DB에서 데이터를 불러오는 중...');
-        
-        currentAbortController = new AbortController();
-        const res = await fetch(`${SERVER_URL}/api/get_unanswered_from_db`, { 
-            method: 'GET',
-            signal: currentAbortController.signal 
-        });
-        
-        if (!res.ok) {
-            throw new Error(`서버 응답 오류: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        console.log('DB 조회 결과:', data); // 디버그 로그
-        
-        if (data.success) {
-            if (data.qas && data.qas.length > 0) {
-                inquiries = data.qas;
-                renderSeparatedInquiries();
-                updateTotalCount();
-                showMessage('success', `✅ ${data.qas.length}개 문의를 불러왔습니다!`);
-            } else {
-                inquiries = [];
-                renderSeparatedInquiries();
-                document.getElementById('unanswered-count').textContent = '0개';
-                showMessage('info', 'ℹ️ 저장된 문의가 없습니다.');
-            }
-        } else {
-            throw new Error(data.error || '알 수 없는 오류');
-        }
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('요청이 취소되었습니다.');
-            return;
-        }
-        console.error('DB 불러오기 실패:', error);
-        showMessage('error', '❌ 불러오기 실패: ' + error.message);
-    } finally {
-        // 항상 로딩 상태 해제
-        isTaskRunning = false;
-    }
-}
-
 // 미답변 문의 가져오기
 async function fetchUnanswered() {
     if (!confirm('서버에서 미답변 문의를 새로 가져오시겠습니까?\n\n크롤링에 시간이 소요됩니다 (1-3분).')) return;
 
     try {
         showMessage('loading', '🤖 서버에서 미답변 문의를 수집하는 중...');
-        showLoading();
         
-        currentAbortController = new AbortController();
-        const res = await fetch(`${SERVER_URL}/togle/get_unanswered`, {
-            signal: currentAbortController.signal
-        });
-        
-        if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
-        
+        // 기존 fetch URL을 변경: get_unanswered_from_db API로 요청
+        const res = await fetch(`${SERVER_URL}/api/get_unanswered_from_db`, { method: 'GET' });
         const data = await res.json();
         
-        if (data.qas && Array.isArray(data.qas) && data.qas.length > 0) {
-            inquiries = data.qas;
-            renderSeparatedInquiries();
-            updateTotalCount();
-            
-            // DB에 저장
-            const saveRes = await fetch(`${SERVER_URL}/api/save_unanswered`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ unanswered_list: inquiries }),
-                signal: currentAbortController.signal
-            });
-            
-            const saveData = await saveRes.json();
-            if (saveData.success) {
-                showMessage('success', `✅ ${inquiries.length}개 문의를 가져왔고 DB에 저장되었습니다!`);
+        if (data.success) {
+            if (data.qas && data.qas.length > 0) {
+                // 미답변 문의 데이터를 화면에 렌더링
+                inquiries = data.qas;  // 전역 변수에 데이터 저장
+                renderInquiries();  // 화면에 데이터 렌더링
+                updateUnansweredCount();    // 갯수 업데이트
+                showMessage('success', `✅ ${data.qas.length}개 미답변 문의를 가져왔습니다!`);
             } else {
-                showMessage('error', '❌ DB 저장 실패: ' + saveData.error);
+                inquiries = [];  // 데이터 없을 경우 빈 배열로 초기화
+                document.getElementById('unanswered-count').textContent = '0개';
+                renderInquiries();  // 화면 렌더링 (빈 목록일 경우에도)
+                showMessage('info', '❌ 미답변 문의가 없습니다.');
             }
         } else {
-            inquiries = [];
-            renderSeparatedInquiries();
-            document.getElementById('unanswered-count').textContent = '0개';
-            showMessage('info', 'ℹ️ 미답변 문의가 없습니다.');
+            showMessage('error', '❌ 가져오기 실패: ' + data.error);
         }
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('요청이 취소되었습니다.');
-            return;
-        }
         showMessage('error', '❌ 가져오기 실패: ' + error.message);
-    } finally {
-        hideLoading();
     }
 }
 
 // 미답변 문의 수 갱신 함수
-function updateTotalCount() {
+function updateUnansweredCount() {
     const countEl = document.getElementById('unanswered-count');
-    if (countEl) {
-        countEl.textContent = `${inquiries.length}개`;
-    }
+    if (!countEl) return;
+    countEl.textContent = `${inquiries.length}개`;
 }
 
 // 엑셀 다운로드
@@ -689,7 +339,7 @@ async function autoRequestLoadQnA() {
             document.getElementById('unanswered-count').textContent = `${inquiries.length}개`;
 
             // 화면 렌더링
-            renderSeparatedInquiries(); 
+            renderInquiries();
 
             // DB에 데이터를 저장하기 위한 API 호출
             const saveRes = await fetch(`${SERVER_URL}/api/save_unanswered`, {
@@ -714,7 +364,7 @@ async function autoRequestLoadQnA() {
         } else {
             inquiries = [];
             document.getElementById('unanswered-count').textContent = '0개';
-            renderSeparatedInquiries(); 
+            renderInquiries();
             showMessage('info', 'ℹ️ 미답변 문의가 없습니다.');
         }
     } catch (err) {
@@ -725,185 +375,101 @@ async function autoRequestLoadQnA() {
 
 
 // 화면에 문의 목록 표시
-function renderSeparatedInquiries() {
-    if (isShowingSubmitStatus) {
-        // 전송 상태 보기 모드
-        renderSubmitStatusView();
-    } else {
-        // 미답변 보기 모드
-        renderUnansweredView();
-    }
-}
+function renderInquiries() {
+    const content = document.getElementById('content');
 
-// 미답변 보기 모드
-function renderUnansweredView() {
-    // is_submitted=false인 항목만 필터링
-    const unansweredItems = inquiries.filter(item => !item.is_submitted);
-    
-    // 카운트 업데이트
-    document.getElementById('unanswered-only-count').textContent = `${unansweredItems.length}개`;
-    
-    // 미답변 렌더링
-    renderPagedInquiries(
-        unansweredItems, 
-        'unanswered-only', 
-        unansweredOnlyPage, 
-        'unanswered-only-content', 
-        'unanswered-only-pagination'
-    );
-}
-
-// 전송 상태 보기 모드
-function renderSubmitStatusView() {
-    // is_submitted 기준으로 분리
-    const failed = inquiries.filter(item => !item.is_submitted);
-    const success = inquiries.filter(item => item.is_submitted);
-    
-    // 카운트 업데이트
-    document.getElementById('failed-section-count').textContent = `${failed.length}개`;
-    document.getElementById('success-section-count').textContent = `${success.length}개`;
-    
-    // 전송 실패 렌더링
-    renderPagedInquiries(failed, 'failed', failedPage, 'failed-content', 'failed-pagination');
-    
-    // 전송 성공 렌더링
-    renderPagedInquiries(success, 'success', successPage, 'success-content', 'success-pagination');
-}
-
-// 페이지네이션 적용 렌더링 (통합 버전)
-function renderPagedInquiries(items, type, currentPage, contentId, paginationId) {
-    const content = document.getElementById(contentId);
-    const pagination = document.getElementById(paginationId);
-
-    if (!content || !pagination) return;
-
-    if (items.length === 0) {
-        let emptyMessage = '📭 문의가 없습니다.';
-        if (type === 'failed') emptyMessage = '📭 전송 실패 내역이 없습니다.';
-        if (type === 'success') emptyMessage = '📭 전송 성공 내역이 없습니다.';
-        if (type === 'unanswered-only') emptyMessage = '📭 미답변 문의가 없습니다.';
-
-        content.innerHTML = `<div class="empty">${emptyMessage}</div>`;
-        pagination.innerHTML = '';
+    if (inquiries.length === 0) {
+        content.innerHTML = '<div class="empty">📭 미답변 문의가 없습니다.</div>';
         return;
     }
 
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-    const startIdx = (currentPage - 1) * itemsPerPage;
-    const endIdx = startIdx + itemsPerPage;
-    const pageItems = items.slice(startIdx, endIdx);
-
-    // 문의 목록 렌더링
-    content.innerHTML = pageItems.map((item) => {
-        const globalIndex = inquiries.indexOf(item);
-        const isSubmitted = item.is_submitted;
-
-        // 상태 텍스트 & 클래스 결정
-        let statusText = '📭 미답변';
-        let statusClass = 'status-pending';
-        let isReadonly = false;
-
-        if (type === 'failed') {
-            statusText = '❌ 전송 실패';
-        } else if (type === 'success') {
-            statusText = '✅ 전송 성공';
-            statusClass = 'status-modified';
-            isReadonly = true;
-        } else if (isSubmitted) {
-            statusText = '✅ 답변 완료';
-            statusClass = 'status-modified';
-        }
-
-        return `
-            <div class="inquiry-item" data-index="${globalIndex}">
-                <div class="inquiry-header">
-                    <div class="inquiry-meta">
-                        <input type="checkbox" class="select-item" data-index="${globalIndex}" ${isReadonly ? 'disabled' : ''}>
-                        <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall || 'N/A'}</span>
-                        <span><strong>유형:</strong> ${item.q_type || 'N/A'}</span>
-                        <span><strong>작성자:</strong> ${item.q_writer || 'N/A'}</span>
-                        <span><strong>날짜:</strong> ${item.q_date || 'N/A'}</span>
+    content.innerHTML = `
+        <div class="inquiry-list">
+            ${inquiries.map((item, index) => `
+                <div class="inquiry-item" data-index="${index}">
+                    <div class="inquiry-header">
+                        <div class="inquiry-meta">
+                            <input type="checkbox" class="select-item" data-index="${index}">
+                            <span><strong>쇼핑몰:</strong> ${item.q_shopping_mall || 'N/A'}</span>
+                            <span><strong>유형:</strong> ${item.q_type || 'N/A'}</span>
+                            <span><strong>작성자:</strong> ${item.q_writer || 'N/A'}</span>
+                            <span><strong>날짜:</strong> ${item.q_date || 'N/A'}</span>
+                        </div>
+                        <span class="status-badge ${item.q_answer_title ? 'status-modified' : 'status-pending'}">
+                            ${item.q_answer_title ? '답변 작성됨' : '답변 대기'}
+                        </span>
                     </div>
-                    <span class="status-badge ${statusClass}">${statusText}</span>
-                </div>
-                <div class="inquiry-question">
-                    <strong>📝 질문:</strong><br>${item.q_question || '질문 내용 없음'}
-                </div>
-                <div class="inquiry-answer">
-                    <div class="form-group">
-                        <label for="title-${globalIndex}">답변 제목</label>
-                        <input type="text" id="title-${globalIndex}" value="${item.q_answer_title || ''}" placeholder="답변 제목 입력" ${isReadonly ? 'readonly' : ''}>
+
+                    <div class="inquiry-question">
+                        <strong>📝 질문:</strong><br>
+                        ${item.q_question || '질문 내용 없음'}
                     </div>
-                    <div class="form-group">
-                        <label for="content-${globalIndex}">답변 내용</label>
-                        <textarea id="content-${globalIndex}" placeholder="답변 내용을 입력" ${isReadonly ? 'readonly' : ''}>${item.q_answer_content || ''}</textarea>
-                    </div>
-                    <div class="item-actions">
-                        <button class="btn-save" onclick="saveOne(${globalIndex})" ${isReadonly ? 'disabled' : ''}>💾 저장</button>
+
+                    <div class="inquiry-answer">
+                        <div class="form-group">
+                            <label for="title-${index}">답변 제목</label>
+                            <input type="text" id="title-${index}" 
+                                value="${item.q_answer_title || ''}" 
+                                placeholder="답변 제목을 입력하세요">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content-${index}">답변 내용</label>
+                            <textarea id="content-${index}" placeholder="답변 내용을 입력하세요">${item.q_answer_content || ''}</textarea>
+                        </div>
+                        
+                        <div class="item-actions">
+                            <button class="btn-save" onclick="saveOne(${index})">💾 저장</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    }).join('');
-
-    // 페이지네이션 렌더링
-    pagination.innerHTML = `
-        <button class="page-btn" onclick="changePage('${type}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>◀ 이전</button>
-        <span class="page-info">${currentPage} / ${totalPages}</span>
-        <button class="page-btn" onclick="changePage('${type}', ${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>다음 ▶</button>
+            `).join('')}
+        </div>
     `;
-}
-
-// 페이지 변경
-function changePage(type, newPage) {
-    if (type === 'unanswered') {
-        unansweredPage = newPage;
-    } else {
-        answeredPage = newPage;
-    }
-    renderSeparatedInquiries();
 }
 
 // 개별 저장 버튼 클릭 시 특정 항목을 서버에 저장
 async function saveOne(index) {
     try {
+        // 해당 항목에 대한 답변 제목과 내용 수집
         const answerTitle = document.getElementById(`title-${index}`).value;
         const answerContent = document.getElementById(`content-${index}`).value;
-        
         const updatedInquiry = {
             ...inquiries[index],
             q_answer_title: answerTitle,
             q_answer_content: answerContent
         };
 
+        // 서버에 저장 요청
         const res = await fetch(`${SERVER_URL}/api/save_unanswered`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ unanswered_list: [updatedInquiry] })
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                unanswered_list: [updatedInquiry]  // 해당 항목만 전송
+            })
         });
 
         if (!res.ok) throw new Error(`저장 오류: ${res.status}`);
 
         const saveData = await res.json();
         if (saveData.success) {
-            // 메모리 업데이트
-            inquiries[index] = updatedInquiry;
-            showMessage('success', `✅ 문의 ${index + 1}번이 저장되었습니다.`);
-            renderSeparatedInquiries(); // 화면 다시 렌더링
+            // 성공 메시지 표시
+            showMessage('success', `✅ 문의 ${index + 1}번이 DB에 저장되었습니다.`);
         } else {
             throw new Error(saveData.error || '저장 실패');
         }
     } catch (err) {
         console.error(err);
-        showMessage('error', '❌ 저장 실패: ' + err.message);
+        showMessage('error', '❌ 개별 저장 실패: ' + err.message);
     }
 }
 
 // 전체 저장 버튼 클릭 시 모든 데이터를 서버에 저장
 async function saveAll() {
     try {
-        showLoading();
-        
+        // 각 항목에 대한 답변 제목과 내용을 수집
         const updatedInquiries = inquiries.map((item, index) => {
             const answerTitle = document.getElementById(`title-${index}`).value;
             const answerContent = document.getElementById(`content-${index}`).value;
@@ -915,122 +481,72 @@ async function saveAll() {
             };
         });
 
-        currentAbortController = new AbortController();
+        // 서버에 저장 요청
         const res = await fetch(`${SERVER_URL}/api/save_unanswered`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                unanswered_list: updatedInquiries
-            }),
-            signal: currentAbortController.signal
+                unanswered_list: updatedInquiries  // 업데이트된 데이터 전송
+            })
         });
 
         if (!res.ok) throw new Error(`저장 오류: ${res.status}`);
 
         const saveData = await res.json();
         if (saveData.success) {
+            // 성공 메시지 표시
             showMessage('success', `✅ ${updatedInquiries.length}개 문의가 DB에 저장되었습니다.`);
         } else {
             throw new Error(saveData.error || '저장 실패');
         }
     } catch (err) {
-        if (err.name === 'AbortError') {
-            console.log('요청이 취소되었습니다.');
-            return;
-        }
         console.error(err);
         showMessage('error', '❌ 전체 저장 실패: ' + err.message);
-    } finally {
-        hideLoading();
     }
 }
 
+
 // Togle 전송
-// Togle 전송 (전송 실패 항목만)
 async function submitAll() {
-    const failedItems = inquiries.filter(item => !item.is_submitted);
-    
-    if (failedItems.length === 0) {
-        alert('전송할 항목이 없습니다. (모두 전송 완료됨)');
-        return;
-    }
-    
-    if (!confirm(`${failedItems.length}개 전송 실패 항목을 Togle에 재전송하시겠습니까?\n\n⚠️ 서버에서 자동으로 처리됩니다 (1-5분 소요)`)) return;
+    if (!confirm('모든 답변을 Togle에 전송하시겠습니까?\n\n⚠️ 서버에서 자동으로 처리됩니다 (1-5분 소요)')) return;
     
     try {
         showMessage('loading', '🚀 서버로 전송 요청 중...');
-        showLoading();
         
-        const answers = failedItems.map((item) => {
-            const globalIndex = inquiries.indexOf(item);
-            const titleEl = document.getElementById(`title-${globalIndex}`);
-            const contentEl = document.getElementById(`content-${globalIndex}`);
-            
-            return {
-                id: item.id,
-                q_question: item.q_question,
-                q_shopping_mall: item.q_shopping_mall,
-                q_type: item.q_type,
-                q_date: item.q_date,
-                q_writer: item.q_writer,
-                q_answer_title: titleEl ? titleEl.value : item.q_answer_title,
-                q_answer_content: contentEl ? contentEl.value : item.q_answer_content
-            };
-        });
+        const answers = inquiries.map((item, index) => ({
+            q_question: item.q_question,
+            q_shopping_mall: item.q_shopping_mall,
+            q_type: item.q_type,
+            q_date: item.q_date,
+            q_writer: item.q_writer,
+            q_answer_title: document.getElementById(`title-${index}`).value,
+            q_answer_content: document.getElementById(`content-${index}`).value
+        }));
         
-        console.log('전송할 답변:', answers);
+        console.log('전송할 답변:', answers); // 디버깅용
         
-        currentAbortController = new AbortController();
         const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({answers}),
-            signal: currentAbortController.signal
+            body: JSON.stringify({answers})
         });
-        
-        if (!res.ok) {
-            throw new Error(`전송 실패: HTTP ${res.status}`);
-        }
         
         const data = await res.json();
         
         if (data.success || res.status === 202) {
-            // ✅ 전송 요청 성공 시 즉시 메모리에서 is_submitted = true로 변경
-            failedItems.forEach(item => {
-                const idx = inquiries.indexOf(item);
-                if (idx !== -1) {
-                    inquiries[idx].is_submitted = true;
-                }
-            });
-            
-            // ✅ 화면 즉시 업데이트
-            renderSeparatedInquiries();
-            
-            showMessage('success', `✅ ${failedItems.length}개 항목 전송 요청 완료!\n\n전송 성공 내역으로 이동되었습니다.`);
-            
-            // 5초 후 DB에서 최신 상태 확인
-            setTimeout(() => {
-                hideLoading();
-                loadFromDB();
-            }, 5000);
+            showMessage('success', `✅ ${data.message || '전송 시작!'}\n\n서버에서 처리 중입니다.`);
+            setTimeout(() => autoRequestLoadQnA(), 5000);
         } else {
             showMessage('error', `❌ 전송 실패: ${data.error}`);
-            hideLoading();
         }
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('요청이 취소되었습니다.');
-            return;
-        }
         console.error('전송 오류:', error);
         showMessage('error', '❌ 전송 실패: ' + error.message);
-        hideLoading();
     }
 }
 
-// 선택 항목 전송
 // 선택 항목 전송
 async function submitSelected() {
     const selectedCheckboxes = Array.from(document.querySelectorAll('.select-item:checked'));
@@ -1045,71 +561,38 @@ async function submitSelected() {
 
     try {
         showMessage('loading', '🚀 선택 항목 전송 중...');
-        showLoading();
         
         const answers = selectedIndices.map(index => {
             const item = inquiries[index];
-            const titleEl = document.getElementById(`title-${index}`);
-            const contentEl = document.getElementById(`content-${index}`);
-            
             return {
-                id: item.id,
                 q_question: item.q_question,
                 q_shopping_mall: item.q_shopping_mall,
                 q_type: item.q_type,
                 q_date: item.q_date,
                 q_writer: item.q_writer,
-                q_answer_title: titleEl ? titleEl.value : item.q_answer_title,
-                q_answer_content: contentEl ? contentEl.value : item.q_answer_content
+                q_answer_title: document.getElementById(`title-${index}`).value,
+                q_answer_content: document.getElementById(`content-${index}`).value
             };
         });
 
-        console.log('선택 항목 전송:', answers);
+        console.log('선택 항목 전송:', answers); // 디버깅용
 
-        currentAbortController = new AbortController();
         const res = await fetch(`${SERVER_URL}/api/submit_answers`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({answers}),
-            signal: currentAbortController.signal
+            body: JSON.stringify({answers})
         });
 
-        if (!res.ok) {
-            throw new Error(`전송 실패: HTTP ${res.status}`);
-        }
-
         const data = await res.json();
-        
         if (data.success || res.status === 202) {
-            // ✅ 전송 요청 성공 시 즉시 메모리에서 is_submitted = true로 변경
-            selectedIndices.forEach(index => {
-                if (inquiries[index]) {
-                    inquiries[index].is_submitted = true;
-                }
-            });
-            
-            // ✅ 화면 즉시 업데이트
-            renderSeparatedInquiries();
-            
-            showMessage('success', `✅ ${selectedIndices.length}개 항목 전송 요청 완료!\n\n전송 성공 내역으로 이동되었습니다.`);
-            
-            // 5초 후 DB에서 최신 상태 확인
-            setTimeout(() => {
-                hideLoading();
-                loadFromDB();
-            }, 5000);
+            showMessage('success', `✅ ${data.message || '전송 요청 완료'} (${selectedIndices.length}개)`);
+            setTimeout(() => autoRequestLoadQnA(), 5000);
         } else {
             showMessage('error', `❌ 전송 실패: ${data.error}`);
-            hideLoading();
         }
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('요청이 취소되었습니다.');
-            return;
-        }
         console.error('전송 오류:', error);
         showMessage('error', '❌ 전송 중 오류: ' + error.message);
-        hideLoading();
     }
 }
 
