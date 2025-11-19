@@ -175,7 +175,17 @@ def submit_status():
             'error': str(e)
         }), 500
 
-
+from datetime import datetime
+@api_bp.route('/update_status', methods=['GET'])
+def update_status():
+    # 상태 정보 생성 (예시)
+    status = {
+        'schedule_time': '매일 09:00',  # 자동 수집 시간
+        'last_updated_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 업데이트된 시간
+    }
+    
+    return jsonify(status)
+    
 @api_bp.route('/generate_answers', methods=['POST'])
 @login_required  # ✅ 로그인 체크 추가
 def generate_answers():
@@ -321,6 +331,82 @@ def download_excel():
 
 from flask import current_app, jsonify, request
 
+# ✅ PDF 정보 조회
+@api_bp.route('/pdf_info', methods=['GET'])
+@login_required
+def get_pdf_info():
+    """PDF 파일 최종 업데이트 시간 조회"""
+    try:
+        from app.utils.paths import get_data_dir
+        import os
+        from datetime import datetime
+        
+        base_dir = get_data_dir()
+        pdf_path = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+        
+        if not os.path.exists(pdf_path):
+            return jsonify({
+                'success': True,
+                'last_updated': '파일 없음'
+            })
+        
+        # 파일 최종 수정 시간 가져오기
+        mtime = os.path.getmtime(pdf_path)
+        last_updated = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify({
+            'success': True,
+            'last_updated': last_updated
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ✅ PDF 다운로드
+@api_bp.route('/download_pdf', methods=['GET'])
+@login_required
+def download_pdf():
+    from flask import send_file, jsonify
+    from app.utils.paths import get_data_dir
+    import os
+    import traceback
+    from datetime import datetime
+    """PDF 파일 다운로드"""
+    try:
+        # 1️⃣ 기본 데이터 디렉토리 가져오기
+        base_dir = get_data_dir()
+        print(f"DEBUG: base_dir = {base_dir}")
+
+        # 2️⃣ PDF 파일 경로 구성
+        pdf_path = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+        print(f"DEBUG: pdf_path = {pdf_path}")
+
+        # 3️⃣ 파일 존재 여부 확인
+        if not os.path.exists(pdf_path):
+            return jsonify({
+                'success': False,
+                'error': f'PDF 파일이 존재하지 않습니다: {pdf_path}'
+            }), 404
+
+        # 4️⃣ send_file로 전송
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=f'togle_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f"서버 오류 발생: {str(e)}"
+        }), 500
+    
 # 스케줄 정보 조회
 @api_bp.route('/schedule_info', methods=['GET'])
 @login_required

@@ -126,49 +126,37 @@ def get_send():
     global current_progress
     return current_progress.copy()
 
-from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update
+from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update, inquiries_crawling
 from app.utils.paths import get_data_dir
 from app.services.fileService import append_unique_to_excel, excel_to_pdf
 from app.models import save_unanswered_to_db
+import requests
 
 def auto_open_togle_prompt(app):
-    """미답변 문의 자동 수집 (이벤트 기반)"""
-    global unanswered_data
-    
+    """답변 완료된 데이터만 크롤링하여 엑셀에 반영하고 PDF로 변환 후 노트북LM 업데이트"""
     with app.app_context():
         driver = None
         try:
-            # 1. 드라이버 설정
+            # 1. 드라이버 설정 (필요시 드라이버 설정)
             driver = set_chromedriver()
-            
-            # 🚀 작업 시작
-            update_progress("start", "🚀 자동 수집 작업을 시작합니다...", "in_progress")
-            logger.info("🚀 자동 수집 시작: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-            # 2. 미답변 문의글 수집
-            update_progress("collect", "📥 미답변 문의글을 수집하고 있습니다...", "in_progress")
-            unanswered_list = get_unanswered_list2(driver)
-            unanswered_data = unanswered_list
-            logger.info(f"✅ 미답변 {len(unanswered_list)}개 수집 완료")
-            update_progress("collect_done", f"✅ 미답변 문의 {len(unanswered_list)}개 수집 완료", "completed")
-            time.sleep(1)  # 이벤트 간 간격
+            # 2. 크롤링: 답변 완료된 미답변 데이터를 필터링
+            update_progress("collect", "📥 답변 완료된 문의글을 수집하고 있습니다...", "in_progress")
+            result_list = inquiries_crawling(driver)
 
-            # 3. 노트북LM 답변 생성
-            update_progress("notebook_answer", "🤖 노트북LM 답변을 생성하고 있습니다...", "in_progress")
-            notebookAnswer_list = get_notebookAnswer(unanswered_list)
-            logger.info(f"✅ 노트북LM 답변 생성 완료: {len(notebookAnswer_list)}개")
-            update_progress("notebook_answer_done", f"✅ 노트북LM 답변 {len(notebookAnswer_list)}개 생성 완료", "completed")
-            time.sleep(1)
+            # 답변 완료된 데이터만 필터링
+            answered_data = [item for item in result_list if item['q_answered']]
+            print(f"✅ 답변 완료 {len(answered_data)}개 수집 완료")
 
-            # 4. 엑셀 업데이트 및 PDF 생성
+            # 3. 엑셀 파일 업데이트
             update_progress("excel_pdf", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
             base_dir = get_data_dir()
             excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
             pdf_path = os.path.join(base_dir, "app", "data", "togle_data.pdf")
 
-            # 엑셀에 데이터를 추가
+            # 엑셀에 답변 완료된 데이터를 추가
             append_unique_to_excel(
-                data_list=unanswered_list,
+                data_list=answered_data,
                 filename="togle_data.xlsx",
                 filepath=excel_path,
                 col_mapping={
@@ -180,7 +168,7 @@ def auto_open_togle_prompt(app):
                     "q_question": "문의내용",
                     "q_answer": "답변"
                 },
-                sheetname="전체",
+                sheetname="답변완료",
                 key_fields=["q_date"],
                 sort_by="q_date"
             )
@@ -189,44 +177,47 @@ def auto_open_togle_prompt(app):
             excel_to_pdf(
                 filepath=excel_path,
                 output_path=pdf_path,
-                source_sheet="전체",
-                columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
-                small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
-                big_headers=("문의내용","답변"),
+                source_sheet="답변완료",
+                columns_order=["쇼핑몰", "유형", "문의일", "답변여부", "작성자", "문의내용", "답변"],
+                small_headers=["쇼핑몰", "유형", "문의일", "답변여부", "작성자"],
+                big_headers=("문의내용", "답변"),
                 orientation="landscape",
                 repeat_header=True
             )
             update_progress("excel_pdf_done", "✅ 엑셀 파일 및 PDF 생성 완료", "completed")
             time.sleep(1)
 
-            # 5. 노트북LM 업데이트
+            # 4. 노트북LM 업데이트
             send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
             notebookLM_update(filepath=pdf_path)
             send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
 
-            # 6. DB 저장
+            # 5. DB 저장
             update_progress("db_save", "💾 데이터베이스에 저장하고 있습니다...", "in_progress")
-            db_saved = save_unanswered_to_db(notebookAnswer_list)
-            
+            db_saved = save_unanswered_to_db(answered_data)
+
             if db_saved:
-                logger.info(f"✅ DB 저장 완료 (답변 포함): {len(notebookAnswer_list)}개")
-                update_progress("db_save_done", f"✅ DB 저장 완료 ({len(notebookAnswer_list)}개)", "completed")
+                logger.info(f"✅ DB 저장 완료 (답변 포함): {len(answered_data)}개")
+                update_progress("db_save_done", f"✅ DB 저장 완료 ({len(answered_data)}개)", "completed")
             else:
                 logger.warning("❌ DB 저장 실패")
                 update_progress("db_save_error", "❌ DB 저장 실패", "error")
             
             time.sleep(1)
 
-            # 7. 완료
+            # 6. 완료
             update_progress("done", "🎉 모든 작업이 완료되었습니다!", "completed")
             logger.info("✅ 자동 수집 작업 완료")
+
+            # 상태 업데이트 (UI에서 마지막 업데이트 시간과 엑셀/PDF 상태를 갱신)
+            requests.get('http://127.0.0.1:5005/api/update_status')
 
         except Exception as e:
             logger.error(f"❌ 자동 수집 중 오류: {e}", exc_info=True)
             update_progress("error", f"❌ 오류 발생: {str(e)}", "error")
-            
+
         finally:
-            # 8. 드라이버 종료
+            # 7. 드라이버 종료
             if driver:
                 try:
                     driver.quit()
@@ -234,14 +225,125 @@ def auto_open_togle_prompt(app):
                 except Exception as quit_error:
                     logger.error(f"⚠️ 드라이버 종료 실패: {quit_error}")
             
-            # 9. 10초 후 idle 상태로 전환
+            # 8. 10초 후 idle 상태로 전환
             def reset_to_idle():
                 time.sleep(10)
-                # 완료 또는 오류인 경우에만 idle로 변경
                 if current_progress.get("step") in ["done", "error"]:
                     update_progress("idle", "", "idle")
 
             threading.Thread(target=reset_to_idle, daemon=True).start()
+
+# def auto_open_togle_prompt(app):
+#     """미답변 문의 자동 수집 (이벤트 기반)"""
+#     global unanswered_data
+    
+#     with app.app_context():
+#         driver = None
+#         try:
+#             # 1. 드라이버 설정
+#             driver = set_chromedriver()
+            
+#             # 🚀 작업 시작
+#             update_progress("start", "🚀 자동 수집 작업을 시작합니다...", "in_progress")
+#             logger.info("🚀 자동 수집 시작: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+#             # 2. 미답변 문의글 수집
+#             update_progress("collect", "📥 미답변 문의글을 수집하고 있습니다...", "in_progress")
+#             unanswered_list = get_unanswered_list2(driver)
+#             unanswered_data = unanswered_list
+#             logger.info(f"✅ 미답변 {len(unanswered_list)}개 수집 완료")
+#             update_progress("collect_done", f"✅ 미답변 문의 {len(unanswered_list)}개 수집 완료", "completed")
+#             time.sleep(1)  # 이벤트 간 간격
+
+#             # 3. 노트북LM 답변 생성
+#             update_progress("notebook_answer", "🤖 노트북LM 답변을 생성하고 있습니다...", "in_progress")
+#             notebookAnswer_list = get_notebookAnswer(unanswered_list)
+#             logger.info(f"✅ 노트북LM 답변 생성 완료: {len(notebookAnswer_list)}개")
+#             update_progress("notebook_answer_done", f"✅ 노트북LM 답변 {len(notebookAnswer_list)}개 생성 완료", "completed")
+#             time.sleep(1)
+
+#             # 4. 엑셀 업데이트 및 PDF 생성
+#             update_progress("excel_pdf", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
+#             base_dir = get_data_dir()
+#             excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+#             pdf_path = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+
+#             # 엑셀에 데이터를 추가
+#             append_unique_to_excel(
+#                 data_list=unanswered_list,
+#                 filename="togle_data.xlsx",
+#                 filepath=excel_path,
+#                 col_mapping={
+#                     "q_shopping_mall": "쇼핑몰",
+#                     "q_type": "유형",
+#                     "q_date": "문의일",
+#                     "q_answered": "답변여부",
+#                     "q_writer": "작성자",
+#                     "q_question": "문의내용",
+#                     "q_answer": "답변"
+#                 },
+#                 sheetname="전체",
+#                 key_fields=["q_date"],
+#                 sort_by="q_date"
+#             )
+
+#             # 엑셀을 PDF로 변환
+#             excel_to_pdf(
+#                 filepath=excel_path,
+#                 output_path=pdf_path,
+#                 source_sheet="전체",
+#                 columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+#                 small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+#                 big_headers=("문의내용","답변"),
+#                 orientation="landscape",
+#                 repeat_header=True
+#             )
+#             update_progress("excel_pdf_done", "✅ 엑셀 파일 및 PDF 생성 완료", "completed")
+#             time.sleep(1)
+
+#             # 5. 노트북LM 업데이트
+#             send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
+#             notebookLM_update(filepath=pdf_path)
+#             send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
+
+#             # 6. DB 저장
+#             update_progress("db_save", "💾 데이터베이스에 저장하고 있습니다...", "in_progress")
+#             db_saved = save_unanswered_to_db(notebookAnswer_list)
+            
+#             if db_saved:
+#                 logger.info(f"✅ DB 저장 완료 (답변 포함): {len(notebookAnswer_list)}개")
+#                 update_progress("db_save_done", f"✅ DB 저장 완료 ({len(notebookAnswer_list)}개)", "completed")
+#             else:
+#                 logger.warning("❌ DB 저장 실패")
+#                 update_progress("db_save_error", "❌ DB 저장 실패", "error")
+            
+#             time.sleep(1)
+
+#             # 7. 완료
+#             update_progress("done", "🎉 모든 작업이 완료되었습니다!", "completed")
+#             logger.info("✅ 자동 수집 작업 완료")
+
+#         except Exception as e:
+#             logger.error(f"❌ 자동 수집 중 오류: {e}", exc_info=True)
+#             update_progress("error", f"❌ 오류 발생: {str(e)}", "error")
+            
+#         finally:
+#             # 8. 드라이버 종료
+#             if driver:
+#                 try:
+#                     driver.quit()
+#                     logger.info("✅ 크롬 드라이버 종료 완료")
+#                 except Exception as quit_error:
+#                     logger.error(f"⚠️ 드라이버 종료 실패: {quit_error}")
+            
+#             # 9. 10초 후 idle 상태로 전환
+#             def reset_to_idle():
+#                 time.sleep(10)
+#                 # 완료 또는 오류인 경우에만 idle로 변경
+#                 if current_progress.get("step") in ["done", "error"]:
+#                     update_progress("idle", "", "idle")
+
+#             threading.Thread(target=reset_to_idle, daemon=True).start()
 
 
 # def auto_open_togle_prompt(app):
@@ -279,7 +381,7 @@ def start_scheduler(app):
     def scheduled_task():
         with app.app_context():
             auto_open_togle_prompt(app)
-
+            
     # 매일 9시 실행
     scheduler.add_job(
         scheduled_task,
@@ -291,13 +393,13 @@ def start_scheduler(app):
     )
 
     # 🧪 테스트용: 10초 후 1회 실행
-    # scheduler.add_job(
-    #     scheduled_task,
-    #     trigger="date",
-    #     run_date=datetime.now() + timedelta(seconds=10),
-    #     id="test_collection_once",
-    #     replace_existing=True,
-    # )
+    scheduler.add_job(
+        scheduled_task,
+        trigger="date",
+        run_date=datetime.now() + timedelta(seconds=10),
+        id="test_collection_once",
+        replace_existing=True,
+    )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")
@@ -310,6 +412,16 @@ def log_event(event):
     elif event.code == EVENT_JOB_ERROR:
         logger.error(f"❌ Job {event.job_id} failed at {event.scheduled_run_time}")
 
+def update_status_after_task():
+    """작업 완료 후 상태 업데이트"""
+    # 여기에서 엑셀과 PDF 업데이트 완료 상태를 설정
+    # 이 함수는 auto_open_togle_prompt 작업 완료 후 호출됩니다.
+    status = {
+        'schedule_time': '매일 09:00',  # 자동 수집 시간
+        'excel_update': '✅ 엑셀 업데이트 완료',  # 엑셀 업데이트 완료 표시
+        'pdf_update': '✅ PDF 업데이트 완료'  # PDF 업데이트 완료 표시
+    }
+    return status  # 상태 업데이트 반환 (API로 반환할 수 있습니다)
 
 # ==========================
 # Flask 앱 생성

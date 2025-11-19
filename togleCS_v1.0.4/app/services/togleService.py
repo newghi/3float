@@ -46,54 +46,119 @@ def collectionButtonOn(driver):
         print("❌ 동기화 완료 팝업이 안나왔습니다.")
 
 # 문의내역 크롤링 로직
+# def inquiries_crawling(driver):
+#     result_list = [] # 문의내역 담는 dict
+
+#     # 페이지 전체의 번호들을 추출하기.
+#     page_div = driver.find_element(By.XPATH, "//div[@class='q-pagination row no-wrap items-center']")
+#     span_elements = page_div.find_elements(By.XPATH, ".//span[@class='block']")
+#     numbers = [int(span.text.strip()) for span in span_elements if span.text.strip().isdigit()] # 중간에 ... 으로 끊긴 번호는 안나옴
+
+#     page_list = [i for i in range(1, max(numbers) + 1)]
+#     print(f"✅ 페이지 전체 번호 : {page_list}")
+
+#     count = max(page_list)
+#     print(f"✅ {count}번 크롤링 돌림")
+
+#     for page in range(count):
+#         time.sleep(2)
+#         list_div = driver.find_element(By.XPATH, "//div[@class='ag-center-cols-container']")
+#         rows = list_div.find_elements(By.XPATH, ".//div[@role='row']")
+
+#         for row in rows:
+#             try:
+#                 cells = row.find_elements(By.XPATH, ".//div[@role='gridcell']")
+#                 result = {
+#                     "q_shopping_mall": cells[0].text.strip(),
+#                     "q_type": cells[1].text.strip(),
+#                     "q_date": datetime.strptime(cells[2].text.strip(), "%Y-%m-%d %H:%M:%S"),
+#                     "q_answered": cells[3].text.strip() == "답변완료",
+#                     "q_writer": cells[4].text.strip(),
+#                     "q_question": cells[5].text.strip(),
+#                     "q_answer": cells[6].text.strip()
+#                 }
+#                 result_list.append(result)
+#             except Exception as e:
+#                 print(f"❌ row 파싱 실패: {e}")
+            
+#         print(f"✅ {page+1}페이지 / 문의내역 : {len(rows)}개")
+
+#         try:
+#             page_div = driver.find_element(By.XPATH, "//div[@class='q-pagination row no-wrap items-center']")
+            
+#             next_page_num = page + 2  # 현재 페이지가 page+1 이니까 다음 페이지는 +2
+#             next_span = page_div.find_element(By.XPATH, f".//span[@class='block' and text()='{next_page_num}']")
+#             next_btn = next_span.find_element(By.XPATH, "./ancestor::button")
+#             next_btn.click()
+#         except Exception as e:
+#             print(f"❌ 페이지 {page+2} 이동 실패: {e}")
+#             break
+
+#     # 결과 확인
+#     print(f"✅ 총 결과 갯수 : {len(result_list)}")
+#     return result_list
+
 def inquiries_crawling(driver):
-    result_list = [] # 문의내역 담는 dict
+    
+    togle_macro(driver)
 
-    # 페이지 전체의 번호들을 추출하기.
-    page_div = driver.find_element(By.XPATH, "//div[@class='q-pagination row no-wrap items-center']")
-    span_elements = page_div.find_elements(By.XPATH, ".//span[@class='block']")
-    numbers = [int(span.text.strip()) for span in span_elements if span.text.strip().isdigit()] # 중간에 ... 으로 끊긴 번호는 안나옴
+    result_list = []  # 문의내역 담는 dict
 
-    page_list = [i for i in range(1, max(numbers) + 1)]
-    print(f"✅ 페이지 전체 번호 : {page_list}")
+    try:
+        # 페이지 전체의 번호들을 추출하기.
+        page_div = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[@class='q-pagination row no-wrap items-center']"))
+        )
+        span_elements = page_div.find_elements(By.XPATH, ".//span[@class='block']")
+        numbers = [int(span.text.strip()) for span in span_elements if span.text.strip().isdigit()]  # 중간에 ... 으로 끊긴 번호는 안나옴
 
-    count = max(page_list)
-    print(f"✅ {count}번 크롤링 돌림")
+        page_list = [i for i in range(1, max(numbers) + 1)]
+        print(f"✅ 페이지 전체 번호 : {page_list}")
 
-    for page in range(count):
-        time.sleep(2)
-        list_div = driver.find_element(By.XPATH, "//div[@class='ag-center-cols-container']")
-        rows = list_div.find_elements(By.XPATH, ".//div[@role='row']")
+        count = max(page_list)
+        print(f"✅ {count}번 크롤링 돌림")
 
-        for row in rows:
+        # 각 페이지를 돌며 문의내역 수집
+        for page in range(count):
+            time.sleep(2)
+            list_div = driver.find_element(By.XPATH, "//div[@class='ag-center-cols-container']")
+            rows = list_div.find_elements(By.XPATH, ".//div[@role='row']")
+
+            for row in rows:
+                try:
+                    cells = row.find_elements(By.XPATH, ".//div[@role='gridcell']")
+                    result = {
+                        "q_shopping_mall": cells[0].text.strip(),
+                        "q_type": cells[1].text.strip(),
+                        "q_date": datetime.strptime(cells[2].text.strip(), "%Y-%m-%d %H:%M:%S"),
+                        "q_answered": cells[3].text.strip() == "답변완료",
+                        "q_writer": cells[4].text.strip(),
+                        "q_question": cells[5].text.strip(),
+                        "q_answer": cells[6].text.strip()
+                    }
+                    result_list.append(result)
+                except Exception as e:
+                    print(f"❌ row 파싱 실패: {e}")
+
+            print(f"✅ {page+1}페이지 / 문의내역 : {len(rows)}개")
+
             try:
-                cells = row.find_elements(By.XPATH, ".//div[@role='gridcell']")
-                result = {
-                    "q_shopping_mall": cells[0].text.strip(),
-                    "q_type": cells[1].text.strip(),
-                    "q_date": datetime.strptime(cells[2].text.strip(), "%Y-%m-%d %H:%M:%S"),
-                    "q_answered": cells[3].text.strip() == "답변완료",
-                    "q_writer": cells[4].text.strip(),
-                    "q_question": cells[5].text.strip(),
-                    "q_answer": cells[6].text.strip()
-                }
-                result_list.append(result)
+                # 페이지 이동 처리 (다음 페이지 버튼 클릭)
+                page_div = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@class='q-pagination row no-wrap items-center']"))
+                )
+                
+                next_page_num = page + 2  # 현재 페이지가 page+1 이니까 다음 페이지는 +2
+                next_span = page_div.find_element(By.XPATH, f".//span[@class='block' and text()='{next_page_num}']")
+                next_btn = next_span.find_element(By.XPATH, "./ancestor::button")
+                next_btn.click()
             except Exception as e:
-                print(f"❌ row 파싱 실패: {e}")
-            
-        print(f"✅ {page+1}페이지 / 문의내역 : {len(rows)}개")
+                print(f"❌ 페이지 {page+2} 이동 실패: {e}")
+                break
 
-        try:
-            page_div = driver.find_element(By.XPATH, "//div[@class='q-pagination row no-wrap items-center']")
-            
-            next_page_num = page + 2  # 현재 페이지가 page+1 이니까 다음 페이지는 +2
-            next_span = page_div.find_element(By.XPATH, f".//span[@class='block' and text()='{next_page_num}']")
-            next_btn = next_span.find_element(By.XPATH, "./ancestor::button")
-            next_btn.click()
-        except Exception as e:
-            print(f"❌ 페이지 {page+2} 이동 실패: {e}")
-            break
-
+    except Exception as e:
+        print(f"❌ 페이지 크롤링 중 오류 발생: {e}")
+    
     # 결과 확인
     print(f"✅ 총 결과 갯수 : {len(result_list)}")
     return result_list
@@ -439,22 +504,75 @@ def append_category_id(data_list):
     return data_list
 
 # 노트북LM PDF 업데이트 함수
+# def notebookLM_update(filepath):
+#     driver = set_undetected_chromedriver()
+
+#     # 노트북LM에 접속하기
+#     notebookLM_login(driver)
+
+#     # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
+#     try:
+#         # 'togle_data.pdf'를 정확히 찾아 삭제
+#         pdf_div = driver.find_element(By.XPATH, "//div[normalize-space(text())='togle_data.pdf']")
+#         actions = ActionChains(driver)
+#         actions.move_to_element(pdf_div).perform()
+
+#         # '더보기' 버튼 클릭
+#         search_element(driver, By.XPATH, "//div[normalize-space(text())='togle_data.pdf']//button[@aria-label='더보기']", "click")
+#         time.sleep(1)
+        
+#         # '소스 삭제' 클릭
+#         search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")
+#         time.sleep(1)
+        
+#         # '삭제' 클릭
+#         search_element(driver, By.XPATH, "//span[normalize-space(text())='삭제']", "click")
+#         time.sleep(1)
+#         print("✅ 'togle_data.pdf' 파일 삭제 완료")
+        
+#     except Exception as e:
+#         print(f"삭제할 파일을 찾을 수 없습니다: {e}")
+
+#     # 새로운 'togle_data.pdf' 추가
+#     try:
+#         search_element(driver, By.XPATH, "//button[@aria-label='출처 추가']", "click")
+#         print("✅ '추가' 버튼 클릭")
+
+#         file_button = driver.find_element(By.XPATH, "//button[@aria-label='컴퓨터에서 소스 업로드']")
+#         actions.move_to_element(file_button).perform()
+
+#         # 'togle_data.pdf' 업로드
+#         upload_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
+#         upload_input.send_keys(os.path.join(current_app.root_path, "data", "togle_data.pdf"))
+#         time.sleep(5)
+#         print("✅ 새로운 'togle_data.pdf' 추가 완료")
+    
+#     except Exception as e:
+#         print(f"파일 추가 과정에서 오류가 발생했습니다: {e}")
+
+#     # 드라이버 종료
+#     driver.quit()
+#     return None
 def notebookLM_update(filepath):
     driver = set_undetected_chromedriver()
 
     # 노트북LM에 접속하기
     notebookLM_login(driver)
-
     # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
     try:
-        # 'togle_data.pdf'를 정확히 찾아 삭제
-        pdf_div = driver.find_element(By.XPATH, "//div[normalize-space(text())='togle_data.pdf']")
+        # 'togle_data.pdf' 텍스트를 포함하는 div 요소를 기다리며 찾기
+        pdf_div = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(normalize-space(text()), 'togle_data.pdf')]"))
+        )
         actions = ActionChains(driver)
         actions.move_to_element(pdf_div).perform()
+        time.sleep(0.5)  # 메뉴가 나타날 시간 확보
 
         # '더보기' 버튼 클릭
-        search_element(driver, By.XPATH, "//div[normalize-space(text())='togle_data.pdf']//button[@aria-label='더보기']", "click")
-        time.sleep(1)
+        more_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//div[contains(normalize-space(text()), 'togle_data.pdf')]//mat-icon[contains(@class,'source-item-more-menu-icon')]"))
+        )
+        more_button.click()
         
         # '소스 삭제' 클릭
         search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")

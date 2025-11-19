@@ -22,9 +22,9 @@ def index():
     ip = request.remote_addr
 
     # 외부 IP면 external_view.html
-    if not is_private_ip(ip):
-        # 필요하면 로그 기록도 여기서 추가 가능
-        return render_template('external_view.html', user=current_user)
+    # if not is_private_ip(ip):
+    #     # 필요하면 로그 기록도 여기서 추가 가능
+    #     return render_template('external_view.html', user=current_user)
 
     # 내부 IP면 기존 index.html
     return render_template('index.html', user=current_user)

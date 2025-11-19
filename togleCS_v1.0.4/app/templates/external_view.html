@@ -209,6 +209,11 @@
                 <div class="status-value" id="excel-update">로딩 중...</div>
                 <button class="status-btn" onclick="downloadExcel()">⬇️ 다운로드</button>
             </div>
+            <div class="status-item excel">
+                <div class="status-label">📄 PDF 데이터</div>
+                <div class="status-value" id="pdf-update">로딩 중...</div>
+                <button class="status-btn" onclick="downloadPDF()">⬇️ PDF 다운로드</button>
+            </div>
             <div class="status-item">
                 <div class="status-label">📝 전체 문의 수</div>
                 <div class="status-value" id="unanswered-count">0개</div>
@@ -358,6 +363,7 @@ function cancelAllTasks() {
 window.onload = () => {
     loadExcelInfo();
     loadScheduleInfo();
+    loadPdfInfo();
     // loadFromDB(); // 페이지 로드 시 DB에서 자동 데이터 불러오기
     setTimeout(() => {
         pollStatus();
@@ -369,13 +375,36 @@ async function loadExcelInfo() {
     try {
         const res = await fetch(`${SERVER_URL}/api/excel_info`);
         const data = await res.json();
+        console.log('엑셀 데이터:', data);  // 응답 데이터 로그 출력
         if (data.success) {
             document.getElementById('excel-update').textContent = data.last_updated || '정보 없음';
+        } else {
+            document.getElementById('excel-update').textContent = '정보 없음';
         }
     } catch (error) {
+        console.error('엑셀 로드 실패:', error);  // 에러 로그 출력
         document.getElementById('excel-update').textContent = '로드 실패';
     }
 }
+
+// PDF 정보 로드
+async function loadPdfInfo() {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/pdf_info`);
+        const data = await res.json();
+        console.log('PDF 데이터:', data);  // 응답 데이터 로그 출력
+        if (data.success) {
+            document.getElementById('pdf-update').textContent = data.last_updated || '정보 없음';
+        } else {
+            document.getElementById('pdf-update').textContent = '정보 없음';
+        }
+    } catch (error) {
+        console.error('PDF 로드 실패:', error);  // 에러 로그 출력
+        document.getElementById('pdf-update').textContent = '로드 실패';
+    }
+}
+
+
 // 스케줄 정보 로드
 async function loadScheduleInfo() {
     try {
@@ -452,22 +481,30 @@ async function pollStatus() {
         if (data.step && data.step !== 'done' && data.step !== 'idle') {
             // 작업 진행 중일 때만 로딩 표시
             if (!isTaskRunning) {
-                showLoading();
+                isTaskRunning = true; // 작업이 진행 중임을 표시
+                showLoading(); // 로딩 표시
             }
             
             if (data.message) {
                 msgEl.innerHTML = `<div class="info">${data.message}</div>`;
             }
             
+            // 엑셀 업데이트 정보 반영
             if (data.excel_last_updated) {
                 document.getElementById('excel-update').textContent = data.excel_last_updated;
+            }
+
+            // PDF 업데이트 정보 반영
+            if (data.pdf_last_updated) {
+                document.getElementById('pdf-update').textContent = data.pdf_last_updated;
             }
             
             // 5초 후 다시 확인
             setTimeout(pollStatus, 5000);
         } else if (data.step === 'done') {
             // 작업 완료
-            hideLoading();
+            isTaskRunning = false; // 작업 완료 상태로 변경
+            hideLoading(); // 로딩 숨기기
             msgEl.innerHTML = '<div class="success">✅ 모든 작업 완료! 스케줄러 최신화 완료</div>';
             setTimeout(() => {
                 msgEl.innerHTML = '';
@@ -475,10 +512,17 @@ async function pollStatus() {
             }, 3000);
         } else {
             // idle 상태 (작업 없음)
-            hideLoading();
+            isTaskRunning = false; // idle 상태로 변경
+            hideLoading(); // 로딩 숨기기
             
+            // 엑셀 업데이트 정보 반영
             if (data.excel_last_updated) {
                 document.getElementById('excel-update').textContent = data.excel_last_updated;
+            }
+            
+            // PDF 업데이트 정보 반영
+            if (data.pdf_last_updated) {
+                document.getElementById('pdf-update').textContent = data.pdf_last_updated;
             }
             
             // idle 상태에서는 30초마다만 확인
@@ -491,6 +535,7 @@ async function pollStatus() {
         setTimeout(pollStatus, 30000);
     }
 }
+
 
 function startStatusPolling() {
     showLoading();
@@ -633,7 +678,10 @@ function updateTotalCount() {
 function downloadExcel() {
     window.open(`${SERVER_URL}/api/download_excel`, '_blank');
 }
-
+// PDF 다운로드
+function downloadPDF() {
+    window.open(`${SERVER_URL}/api/download_pdf`, '_blank');
+}
 // 스케줄 모달
 function openScheduleModal() {
     document.getElementById('scheduleModal').classList.add('active');
@@ -948,7 +996,6 @@ async function saveAll() {
 }
 
 // Togle 전송
-// Togle 전송 (전송 실패 항목만)
 async function submitAll() {
     const failedItems = inquiries.filter(item => !item.is_submitted);
     
@@ -1030,7 +1077,6 @@ async function submitAll() {
     }
 }
 
-// 선택 항목 전송
 // 선택 항목 전송
 async function submitSelected() {
     const selectedCheckboxes = Array.from(document.querySelectorAll('.select-item:checked'));
