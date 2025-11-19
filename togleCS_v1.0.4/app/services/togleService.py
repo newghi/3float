@@ -102,10 +102,10 @@ def inquiries_crawling(driver):
 def notebookLM_login(driver):
     # 노트북LM 접속
     driver.get("https://notebooklm.google.com/")
-    search_element(driver, By.XPATH, "//input[@aria-label='이메일 또는 휴대전화']", "input", "illangel1848@gmail.com")
+    search_element(driver, By.XPATH, "//input[@aria-label='이메일 또는 휴대전화']", "input", "egenauto1808@gmail.com")
     search_element(driver, By.XPATH, "//span[normalize-space(text())='다음']", "click")
     print("✅ 구글 아이디 입력 완료.")
-    search_element(driver, By.XPATH, "//input[@aria-label='비밀번호 입력']", "input", "ysbest@5627")
+    search_element(driver, By.XPATH, "//input[@aria-label='비밀번호 입력']", "input", "ea!46941808")
     search_element(driver, By.XPATH, "//span[normalize-space(text())='다음']", "click")
     print("✅ 구글 비밀번호 입력 완료.")
 
@@ -492,9 +492,13 @@ def notebookLM_update(filepath):
 # 미답변 문의글 list 추출 함수
 def get_unanswered_list():
     driver = set_chromedriver()
-    
+
     # togle 문의글 페이지 접속 매크로
     togle_macro(driver)
+
+    # '문의 수집' 버튼 눌러서 데이터 수집
+    collectionButtonOn(driver)  # 문의 수집 버튼 누르는 함수 호출
+    time.sleep(3)
 
     # 미답변 문의 버튼 선택
     search_element(driver, By.XPATH, "//div[normalize-space(text())='미답변 문의']", "click")
@@ -505,6 +509,7 @@ def get_unanswered_list():
 
     driver.quit()
     return unanswered_list
+
 
 def get_unanswered_list2(driver):
     # togle 문의글 페이지 접속 매크로
@@ -899,3 +904,34 @@ def append_category_id(data_list):
             item["category_id"] = 5  # 기타 카테고리로 분류
 
     return data_list
+
+def submit_answers_to_togle(answers):
+    """
+    답변을 Togle에 실제 전송
+    전송 성공한 문의 ID 리스트 반환
+    """
+    driver = set_chromedriver()
+    success_ids = []
+    
+    try:
+        for answer in answers:
+            try:
+                # Togle 답변 등록 로직
+                # ... (기존 답변 등록 코드)
+                
+                # 성공 시 ID 수집
+                if answer.get('id'):
+                    success_ids.append(answer['id'])
+                    
+            except Exception as e:
+                print(f"❌ 답변 전송 실패: {answer.get('q_writer')} - {e}")
+                continue
+        
+        return success_ids
+        
+    except Exception as e:
+        print(f"❌ 전송 프로세스 실패: {e}")
+        return success_ids
+    finally:
+        if driver:
+            driver.quit()

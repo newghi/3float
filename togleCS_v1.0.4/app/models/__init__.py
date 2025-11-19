@@ -17,15 +17,17 @@ class UnansweredInquiry(db.Model):
     __tablename__ = 'unanswered_inquiries'
     
     id = db.Column(db.Integer, primary_key=True)
-    q_shopping_mall = db.Column(db.String(100))
-    q_type = db.Column(db.String(50))
-    q_date = db.Column(db.DateTime)
+    q_shopping_mall = db.Column(db.String(200))
+    q_type = db.Column(db.String(100))
+    q_date = db.Column(db.String(50))
     q_writer = db.Column(db.String(100))
-    q_question = db.Column(db.Text, nullable=False)
-    q_answer_title = db.Column(db.String(200), default='')
-    q_answer_content = db.Column(db.Text, default='')
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-    is_submitted = db.Column(db.Boolean, default=False)
+    q_question = db.Column(db.Text)
+    q_answer_title = db.Column(db.String(500))
+    q_answer_content = db.Column(db.Text)
+    is_submitted = db.Column(db.Boolean, default=False)  # 전송 여부
+    created_at = db.Column(db.DateTime, default=datetime.now)  # 생성일
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)  # 수정일
+    submitted_at = db.Column(db.DateTime, nullable=True)  # 전송일
     
     def to_dict(self):
         """딕셔너리로 변환"""
@@ -43,39 +45,62 @@ class UnansweredInquiry(db.Model):
         }
 
 
+# 🔧 datetime → 문자열 변환 (SQLAlchemy 오류 방지)
+def normalize_dt(value):
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+    return value if value is not None else None
+
 # ✅ 데이터베이스 헬퍼 함수들
 def save_unanswered_to_db(unanswered_list):
     """
-    미답변 목록을 DB에 저장
-    기존 데이터가 있으면 UPDATE, 없으면 INSERT
+    미답변 목록을 DB에 저장/업데이트
+    datetime 필드는 문자열로 변환하여 SQLAlchemy 타입 오류(f405) 방지
     """
     try:
+        updated_count = 0
+        inserted_count = 0
+        
         for item in unanswered_list:
-            # 고유 식별 기준 설정 (id가 있다면 id로 조회)
-            question_id = item.get('id') or item.get('q_id') or item.get('question_id')
+            
+            # ----------------------------------------------------
+            # 🔥 datetime → string 변환 (문제가 여기서 발생했음)
+            # ----------------------------------------------------
+            item['q_date'] = normalize_dt(item.get('q_date'))
+            item['created_at'] = normalize_dt(item.get('created_at'))
+            item['updated_at'] = normalize_dt(item.get('updated_at'))
+            item['submitted_at'] = normalize_dt(item.get('submitted_at'))
+            # ----------------------------------------------------
 
-            if question_id:
-                inquiry = UnansweredInquiry.query.get(question_id)
-            else:
-                # id가 없으면 고유 조건으로 검색
-                inquiry = UnansweredInquiry.query.filter_by(
-                    q_shopping_mall=item.get('q_shopping_mall'),
-                    q_writer=item.get('q_writer'),
-                    q_question=item.get('q_question'),
-                    q_date=item.get('q_date')
-                ).first()
+            # 고유 식별: 쇼핑몰 + 작성자 + 질문 + 날짜로 동일 문의 판단
+            inquiry = UnansweredInquiry.query.filter_by(
+                q_shopping_mall=item.get('q_shopping_mall'),
+                q_writer=item.get('q_writer'),
+                q_question=item.get('q_question'),
+                q_date=item.get('q_date')
+            ).first()
 
-            # ① 이미 존재하면 UPDATE
             if inquiry:
-                inquiry.q_answer_title = item.get('q_answer_title', '')
-                inquiry.q_answer_content = item.get('q_answer_content', '')
+                # ----------------------------------------------------
+                # 🔄 기존 문의 업데이트
+                # ----------------------------------------------------
                 inquiry.q_type = item.get('q_type', inquiry.q_type)
-                inquiry.is_submitted = False
-                if hasattr(inquiry, 'updated_at'):
-                    inquiry.updated_at = datetime.now()
+                inquiry.q_answer_title = item.get('q_answer_title', inquiry.q_answer_title)
+                inquiry.q_answer_content = item.get('q_answer_content', inquiry.q_answer_content)
 
-            # ② 존재하지 않으면 INSERT
+                # 답변이 없으면 미제출 상태 유지
+                if not (item.get('q_answer_title') and item.get('q_answer_content')):
+                    inquiry.is_submitted = False
+
+                inquiry.updated_at = datetime.now()
+                
+                updated_count += 1
+                print(f"📝 업데이트: {inquiry.q_shopping_mall} - {inquiry.q_writer}")
+
             else:
+                # ----------------------------------------------------
+                # 🆕 신규 등록
+                # ----------------------------------------------------
                 new_inquiry = UnansweredInquiry(
                     q_shopping_mall=item.get('q_shopping_mall'),
                     q_type=item.get('q_type'),
@@ -88,8 +113,11 @@ def save_unanswered_to_db(unanswered_list):
                 )
                 db.session.add(new_inquiry)
 
+                inserted_count += 1
+                print(f"➕ 신규 등록: {new_inquiry.q_shopping_mall} - {new_inquiry.q_writer}")
+
         db.session.commit()
-        print(f"✅ {len(unanswered_list)}개 항목 DB 저장 완료 (업데이트 포함)")
+        print(f"✅ DB 저장 완료 - 신규: {inserted_count}개, 업데이트: {updated_count}개")
         return True
 
     except Exception as e:
@@ -97,6 +125,66 @@ def save_unanswered_to_db(unanswered_list):
         print(f"❌ DB 저장 실패: {e}")
         return False
 
+
+def mark_inquiries_as_submitted(inquiry_ids):
+    """
+    답변 전송 완료 후 is_submitted=True로 변경
+    답변 날짜 갱신
+    """
+    try:
+        for inquiry_id in inquiry_ids:
+            inquiry = UnansweredInquiry.query.get(inquiry_id)
+            if inquiry:
+                inquiry.is_submitted = True
+                inquiry.submitted_at = datetime.now()  # 답변 전송 날짜
+                if hasattr(inquiry, 'updated_at'):
+                    inquiry.updated_at = datetime.now()
+        
+        db.session.commit()
+        print(f"✅ {len(inquiry_ids)}개 문의 전송 완료 처리")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ 전송 완료 처리 실패: {e}")
+        return False
+
+def get_all_unanswered_from_db():
+    """
+    is_submitted=False인 모든 문의 조회
+    (미답변 또는 답변 작성 중)
+    """
+    try:
+        # is_submitted가 False이거나 NULL인 항목 모두 조회
+        inquiries = UnansweredInquiry.query.filter(
+            (UnansweredInquiry.is_submitted == False) | 
+            (UnansweredInquiry.is_submitted.is_(None))
+        ).order_by(
+            UnansweredInquiry.created_at.desc()
+        ).all()
+        
+        result = []
+        for inquiry in inquiries:
+            result.append({
+                'id': inquiry.id,
+                'q_shopping_mall': inquiry.q_shopping_mall or '',
+                'q_type': inquiry.q_type or '',
+                'q_date': inquiry.q_date or '',
+                'q_writer': inquiry.q_writer or '',
+                'q_question': inquiry.q_question or '',
+                'q_answer_title': inquiry.q_answer_title or '',
+                'q_answer_content': inquiry.q_answer_content or '',
+                'is_submitted': inquiry.is_submitted if inquiry.is_submitted is not None else False,
+                'created_at': inquiry.created_at.strftime('%Y-%m-%d %H:%M:%S') if inquiry.created_at else None,
+                'updated_at': inquiry.updated_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(inquiry, 'updated_at') and inquiry.updated_at else None
+            })
+        
+        print(f"✅ 미제출 문의 {len(result)}개 조회 완료 (is_submitted=False 또는 NULL)")
+        return result
+    except Exception as e:
+        print(f"❌ DB 조회 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 def get_unanswered_from_db():
     """미답변 목록 조회 (제출되지 않은 것만)"""
