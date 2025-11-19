@@ -402,14 +402,12 @@ def update_schedule():
 
         from app import auto_open_togle_prompt
 
-        # 별도 함수 정의: APScheduler 스레드에서도 Flask 컨텍스트 사용
-        def schedule_task(app):
-            with app.app_context():
-                auto_open_togle_prompt(app)
+        def schedule_task():
+            from app import auto_open_togle_prompt
+            auto_open_togle_prompt(current_app)
 
         scheduler.add_job(
             schedule_task,
-            args=[current_app._get_current_object()],
             trigger="cron",
             hour=hour,
             minute=minute,
@@ -425,7 +423,6 @@ def update_schedule():
     except Exception as e:
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 # ✅ 미답변 문의 가져오기 (수동 크롤링)
 @api_bp.route('/fetch_unanswered', methods=['POST'])

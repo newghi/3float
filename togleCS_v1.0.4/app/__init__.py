@@ -205,13 +205,13 @@ def start_scheduler(app):
     )
 
     # 🧪 테스트용: 10초 후 1회 실행 (주석 필요 시 해제)
-    scheduler.add_job(
-        lambda: auto_open_togle_prompt(app),
-        trigger="date",
-        run_date=datetime.now() + timedelta(seconds=10),
-        id="test_collection_once",
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     lambda: auto_open_togle_prompt(app),
+    #     trigger="date",
+    #     run_date=datetime.now() + timedelta(seconds=10),
+    #     id="test_collection_once",
+    #     replace_existing=True,
+    # )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")
