@@ -94,13 +94,6 @@
         <img src="/static/img/logo.png" alt="로고" class="logo" onerror="this.style.display='none'" />
       </a>
     </div>
-  <div class="wrapper">
-    <div class="logo-box">
-      <a href="{{ url_for('index.index') }}">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="로고" class="logo" />
-      </a>
-    </div>
-
     <h1 class="main-title">메인 페이지</h1>
 
     <div class="container">
@@ -329,7 +322,7 @@ async function loadScheduleInfo() {
 
 let isUpdateInProgress = false;  // 상태 업데이트가 진행 중인지 확인하는 변수
 
-// 서버에서 상태 정보를 가져오는 함수
+// 상태 업데이트 함수
 async function updateStatus() {
     try {
         isUpdateInProgress = true;  // 상태 업데이트 중 플래그 설정
@@ -358,11 +351,16 @@ async function updateStatus() {
             isUpdateInProgress = false;  // 상태 업데이트 종료
         }, 3000);
 
+        // 성공 알림창
+        showMessage('success', '✅ 상태 업데이트 완료!');
+        
     } catch (error) {
         console.error('상태 업데이트 실패:', error);
         isUpdateInProgress = false;  // 오류가 나면 업데이트 종료
+        showMessage('error', '⚠️ 상태 업데이트 실패');
     }
 }
+
 
 // 엑셀 다운로드
 function downloadExcel() {
