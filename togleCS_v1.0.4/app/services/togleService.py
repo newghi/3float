@@ -127,6 +127,8 @@ def inquiries_crawling(driver):
             for row in rows:
                 try:
                     cells = row.find_elements(By.XPATH, ".//div[@role='gridcell']")
+                    print(cells[3].text.strip())  # '답변완료' 값이 실제로 어떻게 들어가는지 출력
+
                     result = {
                         "q_shopping_mall": cells[0].text.strip(),
                         "q_type": cells[1].text.strip(),
@@ -507,52 +509,50 @@ def append_category_id(data_list):
 # def notebookLM_update(filepath):
 #     driver = set_undetected_chromedriver()
 
-#     # 노트북LM에 접속하기
-#     notebookLM_login(driver)
-
-#     # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
 #     try:
-#         # 'togle_data.pdf'를 정확히 찾아 삭제
-#         pdf_div = driver.find_element(By.XPATH, "//div[normalize-space(text())='togle_data.pdf']")
+#         # 노트북LM에 접속하기
+#         notebookLM_login(driver)
+    
+#         # 'togle_data.pdf' 파일 삭제
+#         pdf_div = driver.find_element(By.XPATH, "//div[@style='animation-delay: 0.05s;']")
+
 #         actions = ActionChains(driver)
 #         actions.move_to_element(pdf_div).perform()
 
-#         # '더보기' 버튼 클릭
-#         search_element(driver, By.XPATH, "//div[normalize-space(text())='togle_data.pdf']//button[@aria-label='더보기']", "click")
+#         search_element(driver, By.XPATH, "//div[@style='animation-delay: 0.05s;']//button[@aria-label='더보기']", "click")
 #         time.sleep(1)
-        
-#         # '소스 삭제' 클릭
 #         search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")
 #         time.sleep(1)
-        
-#         # '삭제' 클릭
 #         search_element(driver, By.XPATH, "//span[normalize-space(text())='삭제']", "click")
 #         time.sleep(1)
-#         print("✅ 'togle_data.pdf' 파일 삭제 완료")
-        
-#     except Exception as e:
-#         print(f"삭제할 파일을 찾을 수 없습니다: {e}")
-
-#     # 새로운 'togle_data.pdf' 추가
-#     try:
+#         print("✅ 기존 'togle_data.pdf' 삭제 완료")
+    
+#         # 새로운 'togle_data.pdf' 추가
 #         search_element(driver, By.XPATH, "//button[@aria-label='출처 추가']", "click")
 #         print("✅ '추가' 버튼 클릭")
 
 #         file_button = driver.find_element(By.XPATH, "//button[@aria-label='컴퓨터에서 소스 업로드']")
 #         actions.move_to_element(file_button).perform()
 
-#         # 'togle_data.pdf' 업로드
 #         upload_input = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
 #         upload_input.send_keys(os.path.join(current_app.root_path, "data", "togle_data.pdf"))
 #         time.sleep(5)
 #         print("✅ 새로운 'togle_data.pdf' 추가 완료")
-    
-#     except Exception as e:
-#         print(f"파일 추가 과정에서 오류가 발생했습니다: {e}")
 
-#     # 드라이버 종료
-#     driver.quit()
-#     return None
+#         driver.quit()
+#         return None
+#     except Exception as e:
+#         print("✅ [notebookLM_update] ❌ 예외 발생:", repr(e))
+#         import traceback; print(traceback.format_exc())
+#         raise
+#     finally:
+#         if driver:
+#             try:
+#                 driver.quit()
+#                 print("✅ [notebookLM_update] • 드라이버 종료 완료")
+#             except Exception:
+#                 print("✅ [notebookLM_update] ! 드라이버 종료 중 예외 무시")    
+
 def notebookLM_update(filepath):
     driver = set_undetected_chromedriver()
 
@@ -560,28 +560,19 @@ def notebookLM_update(filepath):
     notebookLM_login(driver)
     # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
     try:
-        # 'togle_data.pdf' 텍스트를 포함하는 div 요소를 기다리며 찾기
-        pdf_div = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.XPATH, "//div[contains(normalize-space(text()), 'togle_data.pdf')]"))
-        )
+        pdf_div = driver.find_element(By.XPATH, "//div[contains(@style, 'animation-delay: 0.05s') and contains(., 'togle_data.pdf')]")
+
         actions = ActionChains(driver)
         actions.move_to_element(pdf_div).perform()
         time.sleep(0.5)  # 메뉴가 나타날 시간 확보
 
-        # '더보기' 버튼 클릭
-        more_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//div[contains(normalize-space(text()), 'togle_data.pdf')]//mat-icon[contains(@class,'source-item-more-menu-icon')]"))
-        )
-        more_button.click()
-        
-        # '소스 삭제' 클릭
+        search_element(driver, By.XPATH, "//div[@style='animation-delay: 0.05s;']//button[@aria-label='더보기']", "click")
+        time.sleep(1)
         search_element(driver, By.XPATH, "//span[normalize-space(text())='소스 삭제']", "click")
         time.sleep(1)
-        
-        # '삭제' 클릭
         search_element(driver, By.XPATH, "//span[normalize-space(text())='삭제']", "click")
         time.sleep(1)
-        print("✅ 'togle_data.pdf' 파일 삭제 완료")
+        print("✅ 기존 'togle_data.pdf' 삭제 완료")
         
     except Exception as e:
         print(f"삭제할 파일을 찾을 수 없습니다: {e}")

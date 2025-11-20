@@ -390,6 +390,7 @@ def start_scheduler(app):
         minute=0,
         id="daily_unanswered_collection",
         replace_existing=True,
+        misfire_grace_time=300  # 5분 = 300초
     )
 
     # 🧪 테스트용: 10초 후 1회 실행
