@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>togleCS</title>
+    {% extends "layout/loading_layout.html" %}
+  {% block content %}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
@@ -92,6 +94,12 @@
         <img src="/static/img/logo.png" alt="로고" class="logo" onerror="this.style.display='none'" />
       </a>
     </div>
+  <div class="wrapper">
+    <div class="logo-box">
+      <a href="{{ url_for('index.index') }}">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="로고" class="logo" />
+      </a>
+    </div>
 
     <h1 class="main-title">메인 페이지</h1>
 
@@ -128,7 +136,7 @@
     </div>
 
     <div class="group">
-      <form action="/togle/update" method="GET" class="card">
+      <form action="{{ url_for('togle.updateView') }}" method="GET" class="card">
         <button type="submit">
           <div class="emoji">📦</div>
           <div class="title">togle 업데이트</div>
@@ -136,7 +144,7 @@
         </button>
       </form>
 
-      <form action="/togle/unanswered" method="GET" class="card">
+      <form action="{{ url_for('togle.unansweredView') }}" method="GET" class="card">
         <button type="submit">
           <div class="emoji">💬</div>
           <div class="title">togle 미답변 자동응답</div>
@@ -144,7 +152,7 @@
         </button>
       </form>
 
-      <form action="/edit_prompt" method="GET" class="card">
+      <form action="{{ url_for('index.edit_prompt') }}" method="GET" class="card">
         <button type="submit">
           <div class="emoji">✏️</div>
           <div class="title">노트북LM 프롬프트 편집</div>
@@ -154,15 +162,17 @@
     </div>
 
     <div class="group">
-      <form action="/review/update" method="GET" class="card">
+      <form action="{{ url_for('review.updateView') }}" method="GET" class="card">
         <button type="submit">
           <div class="emoji">📝</div>
           <div class="title">네이버 리뷰 매크로 가기<br>(미완성)</div>
           <div class="desc">리뷰 자동 처리</div>
         </button>
       </form>
-      
-      <form action="/talktalk" method="GET" class="card">
+    </div>
+
+    <div class="group">
+      <form action="{{ url_for('talktalk.index') }}" method="GET" class="card">
         <button type="submit">
           <div class="emoji">💼</div>
           <div class="title">카카오톡 & 네이버 톡톡<br>(미완성)</div>
@@ -171,7 +181,6 @@
       </form>
     </div>
   </div>
-
   <!-- 로딩 오버레이 -->
   <div id="loading-overlay">
     <div class="spinner"></div>
@@ -518,4 +527,6 @@ async function pollStatus() {
 }
   </script>
 </body>
+  {% endblock %}
+
 </html>

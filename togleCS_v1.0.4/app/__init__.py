@@ -394,12 +394,51 @@ def start_scheduler(app):
     )
 
     # 🧪 테스트용: 10초 후 1회 실행
+    # scheduler.add_job(
+    #     scheduled_task,
+    #     trigger="date",
+    #     run_date=datetime.now() + timedelta(seconds=10),
+    #     id="test_collection_once",
+    #     replace_existing=True,
+    # )
+
+    # 자동으로 all_update 함수 호출 (매주 월요일 9시)
+    def scheduled_update():
+        # 일주일 간격으로 필터 설정 (7일 전부터 오늘까지)
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+
+        # 필터 데이터 준비
+        form_data = {
+            "mall": "전체",
+            "q_type": "전체",
+            "start_date": start_date,
+            "end_date": end_date,
+            "answer_filter": "전체",
+            "include_deleted": "false",  # 삭제된 문의는 포함하지 않음
+            "query": ""  # 쿼리 값은 공백으로 설정
+        }
+
+        # POST 요청을 통해 all_update 함수 호출
+        try:
+            response = requests.post("http://127.0.0.1:5005/togle/all_update", data=form_data)
+            if response.status_code == 200:
+                print("🗒️ 자동 업데이트가 성공적으로 완료되었습니다!")
+            else:
+                print(f"업데이트 요청 실패: {response.status_code}")
+        except Exception as e:
+            print(f"업데이트 요청 중 오류 발생: {str(e)}")
+
+    # 매주 월요일 9시에 자동으로 `scheduled_update` 함수 호출
     scheduler.add_job(
-        scheduled_task,
-        trigger="date",
-        run_date=datetime.now() + timedelta(seconds=10),
-        id="test_collection_once",
-        replace_existing=True,
+        scheduled_update,
+        trigger='cron',
+        day_of_week='mon',  # 월요일
+        hour=9,
+        minute=0,
+        id='weekly_update',  # 작업 ID
+        replace_existing=True,  # 기존 작업이 있을 경우 덮어쓰기
+        misfire_grace_time=300  # 5분
     )
 
     scheduler.start()
