@@ -375,23 +375,23 @@ def start_scheduler(app):
     scheduler = BackgroundScheduler()
     scheduler.add_listener(log_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
-    from app import auto_open_togle_prompt
+    # from app import auto_open_togle_prompt
 
-    # 안전하게 앱 컨텍스트 열고 호출
-    def scheduled_task():
-        with app.app_context():
-            auto_open_togle_prompt(app)
+    # # 안전하게 앱 컨텍스트 열고 호출
+    # def scheduled_task():
+    #     with app.app_context():
+    #         auto_open_togle_prompt(app)
             
-    # 매일 9시 실행
-    scheduler.add_job(
-        scheduled_task,
-        trigger="cron",
-        hour=9,
-        minute=0,
-        id="daily_unanswered_collection",
-        replace_existing=True,
-        misfire_grace_time=300  # 5분 = 300초
-    )
+    # # 매일 9시 실행
+    # scheduler.add_job(
+    #     scheduled_task,
+    #     trigger="cron",
+    #     hour=9,
+    #     minute=0,
+    #     id="daily_unanswered_collection",
+    #     replace_existing=True,
+    #     misfire_grace_time=300  # 5분 = 300초
+    # )
 
     # 🧪 테스트용: 10초 후 1회 실행
     # scheduler.add_job(
@@ -433,12 +433,19 @@ def start_scheduler(app):
     scheduler.add_job(
         scheduled_update,
         trigger='cron',
-        day_of_week='mon',  # 월요일
         hour=9,
         minute=0,
         id='weekly_update',  # 작업 ID
         replace_existing=True,  # 기존 작업이 있을 경우 덮어쓰기
         misfire_grace_time=300  # 5분
+    )
+
+    scheduler.add_job(
+        scheduled_update,
+        trigger="date",
+        run_date=datetime.now() + timedelta(seconds=10),
+        id="test_collection_once",
+        replace_existing=True,
     )
 
     scheduler.start()
