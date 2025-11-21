@@ -100,7 +100,7 @@ def collectionButtonOn(driver):
 
 def inquiries_crawling(driver):
     
-    togle_macro(driver)
+    # togle_macro(driver)
 
     result_list = []  # 문의내역 담는 dict
 
