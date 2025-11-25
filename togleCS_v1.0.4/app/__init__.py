@@ -126,6 +126,20 @@ def get_send():
     global current_progress
     return current_progress.copy()
 
+import psutil
+
+def kill_all_chrome():
+    """백그라운드에서 실행되는 모든 Chrome / ChromeDriver 강제 종료"""
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            name = proc.info['name'].lower()
+            if 'chrome.exe' in name or 'chromedriver.exe' in name:
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    print("🧹 모든 Chrome / ChromeDriver 프로세스 종료 완료")
+
 from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update, inquiries_crawling
 from app.utils.paths import get_data_dir
 from app.services.fileService import append_unique_to_excel, excel_to_pdf
@@ -463,7 +477,10 @@ def start_scheduler(app):
         with app.app_context():
 
             write_log("🔔 스케줄러 작업 시작")
-
+            
+            # 0) 기존 백그라운드 크롬/크롬드라이버 종료
+            kill_all_chrome()
+            
             # 1) 네트워크 상태 체크
             network_ok = check_network_detail()
 
