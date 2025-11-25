@@ -367,33 +367,136 @@ def auto_open_togle_prompt(app):
 #         except Exception as e:
 #             logger.error(f"❌ 자동 수집 중 오류: {e}", exc_info=True)
 
+# PC 서버 환경 속도 체크
+import os
+import subprocess
+import speedtest
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+# 로그 폴더 경로
+LOG_DIR = r"C:\Users\1004\Desktop\3float\togleCS_v1.0.4\logs"
+
+# 폴더 없으면 자동 생성
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# 로그 파일 경로
+LOG_FILE = os.path.join(LOG_DIR, "network_runtime_log.txt")
+
+
+def write_log(message):
+    """공통 로그 기록 함수"""
+    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} {message}\n")
+
+    # 콘솔에도 출력
+    logger.info(message)
+
+
+def check_network_detail():
+    """PING + 속도 측정 결과 기록"""
+    write_log("=== 📡 네트워크 상태 체크 시작 ===")
+
+    # ------------------------------------
+    # 1) Ping 테스트
+    # ------------------------------------
+    try:
+        result = subprocess.run(
+            ["ping", "-n", "4", "8.8.8.8"],   # Windows: 4회 Ping
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        ping_output = result.stdout
+
+        write_log("📌 [PING 결과]\n" + ping_output.replace("\n", " | "))
+
+        # 시간초과 확인
+        if "시간 초과" in ping_output or "timed out" in ping_output:
+            write_log("🚨 PING TIMEOUT 발생")
+            ping_ok = False
+        else:
+            ping_ok = True
+
+    except Exception as e:
+        write_log(f"❌ Ping 테스트 오류: {e}")
+        ping_ok = False
+
+    # ------------------------------------
+    # 2) Speedtest 속도 측정
+    # ------------------------------------
+    try:
+        st = speedtest.Speedtest()
+        st.get_best_server()
+        ping = st.results.ping
+        download = st.download() / 1_000_000   # Mbps 단위 변환
+        upload = st.upload() / 1_000_000       # Mbps 단위 변환
+
+        write_log(
+            f"📊 [속도측정] Ping={ping}ms | Download={download:.2f}Mbps | Upload={upload:.2f}Mbps"
+        )
+
+        speed_ok = True
+
+    except Exception as e:
+        write_log(f"❌ Speedtest 오류 발생: {e}")
+        speed_ok = False
+
+    write_log("=== 📡 네트워크 체크 종료 ===")
+
+    # 둘 중 하나라도 불안정하면 False
+    return ping_ok and speed_ok
+
 # ==========================
 # 스케줄러 시작
 # ==========================
+import traceback
+
 def start_scheduler(app):
-    """스케줄러 시작 (app 인스턴스 컨텍스트 유지)"""
+    """스케줄러 시작"""
     scheduler = BackgroundScheduler()
     scheduler.add_listener(log_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
-    # from app import auto_open_togle_prompt
+    from app import auto_open_togle_prompt
 
-    # # 안전하게 앱 컨텍스트 열고 호출
-    # def scheduled_task():
-    #     with app.app_context():
-    #         auto_open_togle_prompt(app)
-            
-    # # 매일 9시 실행
-    # scheduler.add_job(
-    #     scheduled_task,
-    #     trigger="cron",
-    #     hour=9,
-    #     minute=0,
-    #     id="daily_unanswered_collection",
-    #     replace_existing=True,
-    #     misfire_grace_time=300  # 5분 = 300초
-    # )
+    def scheduled_task():
+        with app.app_context():
 
-    # 🧪 테스트용: 10초 후 1회 실행
+            write_log("🔔 스케줄러 작업 시작")
+
+            # 1) 네트워크 상태 체크
+            network_ok = check_network_detail()
+
+            if not network_ok:
+                write_log("⚠️ 네트워크 불안정 상태에서 작업 실행됨 (원인 가능성 매우 높음)")
+
+            # 2) 실제 작업 실행
+            try:
+                auto_open_togle_prompt(app)
+                write_log("✅ auto_open_togle_prompt 실행 완료")
+
+            except Exception as e:
+                write_log("❌ auto_open_togle_prompt 실행 중 오류 발생")
+                write_log(traceback.format_exc())
+
+                # 스케줄러 이벤트 리스너에서도 기록되도록 다시 raise
+                raise
+
+    # 매일 9시 스케줄
+    scheduler.add_job(
+        scheduled_task,
+        trigger="cron",
+        hour=9,
+        minute=0,
+        id="daily_unanswered_collection",
+        replace_existing=True,
+        misfire_grace_time=300
+    )
+
+    # # 테스트용 10초 후 실행
     # scheduler.add_job(
     #     scheduled_task,
     #     trigger="date",
@@ -402,51 +505,44 @@ def start_scheduler(app):
     #     replace_existing=True,
     # )
 
-    # 자동으로 all_update 함수 호출 (매주 월요일 9시)
-    def scheduled_update():
-        # 일주일 간격으로 필터 설정 (7일 전부터 오늘까지)
-        end_date = datetime.now().strftime('%Y-%m-%d')
-        start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-        # 필터 데이터 준비
-        form_data = {
-            "mall": "전체",
-            "q_type": "전체",
-            "start_date": start_date,
-            "end_date": end_date,
-            "answer_filter": "전체",
-            "include_deleted": "false",  # 삭제된 문의는 포함하지 않음
-            "query": ""  # 쿼리 값은 공백으로 설정
-        }
+    # # 자동으로 all_update 함수 호출 (매주 월요일 9시)
+    # def scheduled_update():
+    #     # 일주일 간격으로 필터 설정 (7일 전부터 오늘까지)
+    #     end_date = datetime.now().strftime('%Y-%m-%d')
+    #     start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-        # POST 요청을 통해 all_update 함수 호출
-        try:
-            response = requests.post("http://127.0.0.1:5005/togle/all_update", data=form_data)
-            if response.status_code == 200:
-                print("🗒️ 자동 업데이트가 성공적으로 완료되었습니다!")
-            else:
-                print(f"업데이트 요청 실패: {response.status_code}")
-        except Exception as e:
-            print(f"업데이트 요청 중 오류 발생: {str(e)}")
+    #     # 필터 데이터 준비
+    #     form_data = {
+    #         "mall": "전체",
+    #         "q_type": "전체",
+    #         "start_date": start_date,
+    #         "end_date": end_date,
+    #         "answer_filter": "전체",
+    #         "include_deleted": "false",  # 삭제된 문의는 포함하지 않음
+    #         "query": ""  # 쿼리 값은 공백으로 설정
+    #     }
 
-    # 매주 월요일 9시에 자동으로 `scheduled_update` 함수 호출
-    scheduler.add_job(
-        scheduled_update,
-        trigger='cron',
-        hour=9,
-        minute=0,
-        id='weekly_update',  # 작업 ID
-        replace_existing=True,  # 기존 작업이 있을 경우 덮어쓰기
-        misfire_grace_time=300  # 5분
-    )
+    #     # POST 요청을 통해 all_update 함수 호출
+    #     try:
+    #         response = requests.post("http://127.0.0.1:5005/togle/all_update", data=form_data)
+    #         if response.status_code == 200:
+    #             print("🗒️ 자동 업데이트가 성공적으로 완료되었습니다!")
+    #         else:
+    #             print(f"업데이트 요청 실패: {response.status_code}")
+    #     except Exception as e:
+    #         print(f"업데이트 요청 중 오류 발생: {str(e)}")
 
-    scheduler.add_job(
-        scheduled_update,
-        trigger="date",
-        run_date=datetime.now() + timedelta(seconds=10),
-        id="test_collection_once",
-        replace_existing=True,
-    )
+    # # 매주 월요일 9시에 자동으로 `scheduled_update` 함수 호출
+    # scheduler.add_job(
+    #     scheduled_update,
+    #     trigger='cron',
+    #     hour=9,
+    #     minute=0,
+    #     id='weekly_update',  # 작업 ID
+    #     replace_existing=True,  # 기존 작업이 있을 경우 덮어쓰기
+    #     misfire_grace_time=300  # 5분
+    # )
 
     scheduler.start()
     logger.info("✅ Scheduler started (매일 9시)")

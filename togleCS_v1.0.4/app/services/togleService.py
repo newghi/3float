@@ -100,7 +100,7 @@ def collectionButtonOn(driver):
 
 def inquiries_crawling(driver):
     
-    # togle_macro(driver)
+    togle_macro(driver)
 
     result_list = []  # 문의내역 담는 dict
 
@@ -556,15 +556,15 @@ def append_category_id(data_list):
 def notebookLM_update(filepath):
     driver = set_undetected_chromedriver()
 
-    # 노트북LM에 접속하기
-    notebookLM_login(driver)
-    # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
     try:
-        pdf_div = driver.find_element(By.XPATH, "//div[contains(@style, 'animation-delay: 0.05s') and contains(., 'togle_data.pdf')]")
-
+        # 노트북LM에 접속하기
+        notebookLM_login(driver)
+        # 'togle_data.pdf' 파일 삭제 (정확한 파일 이름으로 찾기)
+        pdf_div = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'togle_data.pdf')]"))
+        )
         actions = ActionChains(driver)
         actions.move_to_element(pdf_div).perform()
-        time.sleep(0.5)  # 메뉴가 나타날 시간 확보
 
         search_element(driver, By.XPATH, "//div[@style='animation-delay: 0.05s;']//button[@aria-label='더보기']", "click")
         time.sleep(1)
