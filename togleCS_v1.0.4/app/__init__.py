@@ -376,9 +376,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 로그 폴더 경로
-LOG_DIR = r"C:\Users\1004\Desktop\3float\togleCS_v1.0.4\logs"
-
 # 폴더 없으면 자동 생성
 os.makedirs(LOG_DIR, exist_ok=True)
 

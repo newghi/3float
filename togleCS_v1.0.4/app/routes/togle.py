@@ -207,107 +207,107 @@ def post_unanswered():
 
 # app/routes/togle.py에 추가할 코드
 
-from flask_login import login_required, current_user
-from flask import request
+# from flask_login import login_required, current_user
+# from flask import request
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 현재 파일 위치
-LOG_DIR = os.path.join(BASE_DIR, "logs")  # logs 폴더 생성
-IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 현재 파일 위치
+# LOG_DIR = os.path.join(BASE_DIR, "logs")  # logs 폴더 생성
+# IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
 
-@togle_bp.route('/external', methods=['GET'])
-def external_view():
-    # 디버깅용 출력
-    print(f"현재 사용자: {current_user}")
-    print(f"로그인 여부: {current_user.is_authenticated}")
-    print(f"요청 IP: {request.remote_addr}")
+# @togle_bp.route('/external', methods=['GET'])
+# def external_view():
+#     # 디버깅용 출력
+#     print(f"현재 사용자: {current_user}")
+#     print(f"로그인 여부: {current_user.is_authenticated}")
+#     print(f"요청 IP: {request.remote_addr}")
 
-    if not current_user.is_authenticated:
-        print("❌ 로그인 안됨 → auth.login으로 리다이렉트")
-        flash('로그인이 필요합니다.', 'warning')
-        return redirect(url_for('auth.login'))
+#     if not current_user.is_authenticated:
+#         print("❌ 로그인 안됨 → auth.login으로 리다이렉트")
+#         flash('로그인이 필요합니다.', 'warning')
+#         return redirect(url_for('auth.login'))
 
-    # ✅ 로그인됨 → IP 기록
-    now = datetime.now()
-    year_month = now.strftime("%Y.%m")  # 파일명: 2025.11.txt
-    log_file_path = os.path.join(LOG_DIR, f"{year_month}.txt")
+#     # ✅ 로그인됨 → IP 기록
+#     now = datetime.now()
+#     year_month = now.strftime("%Y.%m")  # 파일명: 2025.11.txt
+#     log_file_path = os.path.join(LOG_DIR, f"{year_month}.txt")
 
-    # 로그 디렉토리 없으면 생성
-    os.makedirs(LOG_DIR, exist_ok=True)
+#     # 로그 디렉토리 없으면 생성
+#     os.makedirs(LOG_DIR, exist_ok=True)
 
-    # 기록 내용: yyyy.mm.dd HH:MM:SS - IP - 사용자ID
-    log_entry = f"{now.strftime('%Y.%m.%d %H:%M:%S')} - {request.remote_addr} - {current_user.username}\n"
+#     # 기록 내용: yyyy.mm.dd HH:MM:SS - IP - 사용자ID
+#     log_entry = f"{now.strftime('%Y.%m.%d %H:%M:%S')} - {request.remote_addr} - {current_user.username}\n"
 
-    try:
-        with open(log_file_path, "a", encoding="utf-8") as f:
-            f.write(log_entry)
-        print(f"✅ IP 기록 완료: {log_file_path}")
-    except Exception as e:
-        print(f"❌ IP 기록 실패: {e}")
+#     try:
+#         with open(log_file_path, "a", encoding="utf-8") as f:
+#             f.write(log_entry)
+#         print(f"✅ IP 기록 완료: {log_file_path}")
+#     except Exception as e:
+#         print(f"❌ IP 기록 실패: {e}")
 
-    return render_template('external_view.html', user=current_user)
-
-
-@togle_bp.route('/external/logout', methods=['GET'])
-@login_required
-def external_logout():
-    """로그아웃 (외부 페이지용)"""
-    from flask_login import logout_user
-    logout_user()
-    flash('로그아웃 되었습니다.', 'info')
-    return redirect(url_for('auth.login'))
+#     return render_template('external_view.html', user=current_user)
 
 
-# ✅ 외부에서 프롬프트 편집 페이지
-@togle_bp.route('/external/edit_prompt', methods=['GET'])
-@login_required
-def external_edit_prompt():
-    """외부에서 프롬프트 편집"""
-    from app.utils.paths import get_data_dir
-    import os
+# @togle_bp.route('/external/logout', methods=['GET'])
+# @login_required
+# def external_logout():
+#     """로그아웃 (외부 페이지용)"""
+#     from flask_login import logout_user
+#     logout_user()
+#     flash('로그아웃 되었습니다.', 'info')
+#     return redirect(url_for('auth.login'))
+
+
+# # ✅ 외부에서 프롬프트 편집 페이지
+# @togle_bp.route('/external/edit_prompt', methods=['GET'])
+# @login_required
+# def external_edit_prompt():
+#     """외부에서 프롬프트 편집"""
+#     from app.utils.paths import get_data_dir
+#     import os
     
-    base_dir = get_data_dir()
-    prompt_path = os.path.join(base_dir, "app", "data", "prompt.txt")
+#     base_dir = get_data_dir()
+#     prompt_path = os.path.join(base_dir, "app", "data", "prompt.txt")
     
-    if not os.path.exists(prompt_path):
-        with open(prompt_path, 'w', encoding='utf-8') as f:
-            f.write("")
+#     if not os.path.exists(prompt_path):
+#         with open(prompt_path, 'w', encoding='utf-8') as f:
+#             f.write("")
     
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        prompt = f.read()
+#     with open(prompt_path, 'r', encoding='utf-8') as f:
+#         prompt = f.read()
     
-    return render_template('external_edit_prompt.html', prompt_text=prompt, user=current_user)
+#     return render_template('external_edit_prompt.html', prompt_text=prompt, user=current_user)
 
 
-# ✅ 외부에서 프롬프트 저장
-@togle_bp.route('/external/save_prompt', methods=['POST'])
-@login_required
-def external_save_prompt():
-    """외부에서 프롬프트 저장"""
-    from app.utils.paths import get_data_dir
-    import os, sys
+# # ✅ 외부에서 프롬프트 저장
+# @togle_bp.route('/external/save_prompt', methods=['POST'])
+# @login_required
+# def external_save_prompt():
+#     """외부에서 프롬프트 저장"""
+#     from app.utils.paths import get_data_dir
+#     import os, sys
     
-    new_prompt = request.form.get('prompt_text', '')
+#     new_prompt = request.form.get('prompt_text', '')
     
-    # 불필요한 빈 줄 제거
-    lines = new_prompt.splitlines()
-    cleaned = '\n'.join([line.rstrip() for line in lines if line.strip() != ''])
+#     # 불필요한 빈 줄 제거
+#     lines = new_prompt.splitlines()
+#     cleaned = '\n'.join([line.rstrip() for line in lines if line.strip() != ''])
     
-    # 경로 설정
-    if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+#     # 경로 설정
+#     if getattr(sys, 'frozen', False):
+#         base_dir = os.path.dirname(sys.executable)
+#     else:
+#         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     
-    prompt_path = os.path.abspath(os.path.join(base_dir, "app", "data", "prompt.txt"))
+#     prompt_path = os.path.abspath(os.path.join(base_dir, "app", "data", "prompt.txt"))
     
-    # 저장
-    with open(prompt_path, 'w', encoding='utf-8') as f:
-        f.write(cleaned)
+#     # 저장
+#     with open(prompt_path, 'w', encoding='utf-8') as f:
+#         f.write(cleaned)
     
-    flash('✅ 프롬프트가 저장되었습니다.', 'success')
-    return redirect(url_for('togle.external_edit_prompt'))
+#     flash('✅ 프롬프트가 저장되었습니다.', 'success')
+#     return redirect(url_for('togle.external_edit_prompt'))
 
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 
 # @togle_bp.route('/api/togles_update', methods=['POST'])
 # def togle_update():
@@ -556,38 +556,38 @@ def scheduler_progress():
     
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
-# 현재 진행 상황 조회 엔드포인트
-@togle_bp.route('/api/scheduler/status')
-def scheduler_status():
-    """현재 스케줄러 상태 조회"""
-    return jsonify(send_progress)
+# # 현재 진행 상황 조회 엔드포인트
+# @togle_bp.route('/api/scheduler/status')
+# def scheduler_status():
+#     """현재 스케줄러 상태 조회"""
+#     return jsonify(send_progress)
 
-# 엑셀 정보 조회 엔드포인트 수정
-@togle_bp.route('/api/excel_info')
-def excel_info():
-    """엑셀 파일 최종 업데이트 시간 조회"""
-    try:
-        base_dir = get_data_dir()
-        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+# # 엑셀 정보 조회 엔드포인트 수정
+# @togle_bp.route('/api/excel_info')
+# def excel_info():
+#     """엑셀 파일 최종 업데이트 시간 조회"""
+#     try:
+#         base_dir = get_data_dir()
+#         excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
         
-        if os.path.exists(excel_path):
-            timestamp = os.path.getmtime(excel_path)
-            last_updated = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
-            return jsonify({
-                "success": True,
-                "last_updated": last_updated
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "last_updated": "파일 없음"
-            })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e),
-            "last_updated": "로드 실패"
-        })
+#         if os.path.exists(excel_path):
+#             timestamp = os.path.getmtime(excel_path)
+#             last_updated = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+#             return jsonify({
+#                 "success": True,
+#                 "last_updated": last_updated
+#             })
+#         else:
+#             return jsonify({
+#                 "success": False,
+#                 "last_updated": "파일 없음"
+#             })
+#     except Exception as e:
+#         return jsonify({
+#             "success": False,
+#             "error": str(e),
+#             "last_updated": "로드 실패"
+#         })
 
 @togle_bp.route('/task_status', methods=['GET'])
 def task_status():
