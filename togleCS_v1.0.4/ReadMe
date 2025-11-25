@@ -3,10 +3,94 @@
 ## 프로젝트 개요
 togleCS_v1.0.4는 [프로젝트 목적이나 주요 기능 간단히 작성]을 위한 Python 기반 애플리케이션입니다.
 
+## 프로젝트 구조
+app/
+ ├── data/                 # Excel/PDF 등 데이터 파일 저장 폴더
+ │   ├─ prompt.txt         # NotebookLM Prompt 기본 문구
+ │   ├─ togle_data.pdf     # NotebookLM에 업로드되는 PDF
+ │   └─ togle_data.xlsx    # 전체 문의 기록 저장 엑셀
+ │
+ ├── drivers/              # Selenium 크롬 드라이버 및 글꼴 파일
+ │   ├─ chromedriver.py    # 크롬 드라이버 로더/설정 파일
+ │   └─ Pretendard-Regular.otf  # PDF 변환용 폰트
+ │
+ ├── models/               # DB ORM 모델 모음
+ │   ├─ __init__.py        # api 호출에 따른 DB 저장 호출 파일
+ │   └─ user_model.py      # 사용자(User) 모델 정의
+ │
+ ├── routes/               # Flask Blueprint 라우팅 모음
+ │   ├─ logs/              # 작업 로그 파일 저장 폴더
+ │   └─ 2025.11.txt           # 11월 로그 기록 파일
+ │   ├─ __init__.py             # 외부 API 엔드포인트 (/api/*)
+ │   ├─ api.py             # 외부 API 엔드포인트 (/api/*)
+ │   ├─ auth.py            # 로그인/로그아웃/접근 제어
+ │   ├─ index.py           # 메인 페이지 라우팅
+ │   ├─ init.py            # 초기화/상태 관련 API(작업 상태 등)
+ │   ├─ review.py          # (미사용 또는 리뷰 관련 기능)
+ │   ├─ talktalk.py        # (미사용 또는 별도 채팅 기능)
+ │   └─ togle.py           # Togle 자동화 관련 내부 API
+ │
+ ├── services/             # 비즈니스 로직(서비스 계층)
+ │   ├─ crawlingService.py # Selenium 기반 크롤링 기능
+ │   ├─ dbService.py       # DB 저장/조회 기능
+ │   ├─ fileService.py     # 엑셀, PDF 파일 처리 및 변환 기능
+ │   └─ togleService.py    # Togle 문의 크롤링/답변 제출 기능
+ │
+ ├── static/               # 정적 파일(CSS/JS/이미지)
+ │   ├─ css/
+ │   └─ img/
+ │
+ ├── templates/            # HTML 템플릿 (Jinja2)
+ │   ├─ layout/            # 기본 레이아웃 템플릿 
+ │   └─ loading_layout.html                 # 로딩 오버레이 표시 기능 페이지
+ │   ├─ togle/             # Togle 관련 화면 템플릿
+ │   ├─ togle_unanswered.html           # 미답변 문의글 관련 페이지 
+ │   └─ togle_update.html           # 토글 업데이트 관련 페이지
+ │   ├─ edit_prompt.html           # 내부 사용자가 답변 수정하는 화면 
+ │   ├─ external_edit_prompt.html  # 외부 사용자가 답변 수정하는 화면 (비활성화)
+ │   ├─ external_view.html         # (현재 미사용) 외부 사용자 UI
+ │   ├─ index.html                 # 메인 페이지 UI
+ │   └─ login.html                 # 로그인 화면
+ │
+ ├── utils/
+ │   └─ paths.py           # 프로젝트 경로 기반 폴더 관리 함수
+ │
+ ├── __init__.py           # Flask 앱 초기화 및 스케줄러, DB 설정
+ ├── config.py             # 환경 변수/DB 설정 클래스
+ ├── models.py             # 전역 ORM 로딩 파일
+ ├── routes.py             # 로그인 요청 처리
+ │
+logs/
+└─ network_runtime_log.txt    # 네트워크 지연에 따른 서버 환경 상태 로그 함수
+run.py                     # Flask 실행 엔트리 포인트
+create_user.py             # 계정 자동 생성 스크립트
+requirements.txt           # Python 패키지 목록
+
 ## 주요 기능
 - PDF 자동 업로드 및 관리
 - 웹 자동화 (Selenium 활용)
 - 사용자 인터페이스 제공 (Flask 혹은 기타)
+- 고객 문의 데이터 수집 & 업데이트
+ㄴ Togle 문의 내역 크롤링
+ㄴ 기존 엑셀 파일과 병합하여 중복 없이 업데이트
+ㄴ PDF 자동 변환 후 NotebookLM 업데이트
+- 미답변 자동 수집 & 자동 답변 생성
+ㄴ 수동/자동 크롤링 가능
+ㄴ NotebookLM 기반 답변 자동 생성
+ㄴ UI에서 답변 수정 가능
+ㄴ 버튼 한 번으로 Togle에 자동 제출
+- 스케줄러 기능
+ㄴ 매일 지정된 시간에 자동으로 미답변 수집/DB 업데이트
+ㄴ 웹 UI에서 스케줄 시간 조회/변경 가능
+- 외부 API 제공
+ㄴ 미답변 조회 API
+ㄴ 엑셀/PDF 다운로드 API
+ㄴ 스케줄러 정보 조회 API
+ㄴ 작업 진행 상태 확인 API
+- 인증 및 보안 기능
+ㄴ 로그인 실패 횟수 기반 임시 차단 / 영구 차단
+ㄴ 사설망/외부망 구부하여 다른 뷰 제공
+ㄴ Flask-Login 기반 세션 인증
 
 ## 설치 방법
 1. Python 3.8 이상 설치  
@@ -18,12 +102,38 @@ togleCS_v1.0.4는 [프로젝트 목적이나 주요 기능 간단히 작성]을 
 ㄴ ex. /togle/all_update 실행 시에 errorCode: 500 오류 발생합니다. 
 
 ## 터미널 관련 명령어
-### 로그인 정보 생성
+### 로그인 정보 생성 (togle_db 필요)
 python create_user.py 
 ### exe 파일 최신화 명령어
 pyinstaller --name togleCS_v1.0.4 --onefile --console --add-data "app/templates;app/templates" --add-data "app/static;app/static" --distpath "." run.py 
 ### vsCode powershell 실행 명령어
 python run.py
 
+### 최근 작업 변동사항 요약(2025.11.25)
+요구사항 변동 이전에는 togleCS_v1.0.4 버전을 토대로 기존 함수를 재사용하고 새로운 함수를 생성하여서 미답변 문의를 자동으로 가져오고 
+답변도 자동으로 작성되며 최종적으로 사용자가 전송하면 답변내역이 전송되며, 모든 문의에 대해 답변내역이 DB에 저장되도록 전체 프로세스를 
+자동화하는 것을 지향하고 작업을 진행하였으나,
+요구사항 변동으로 인해 기존에 외부 페이지로 작업중이던 app\templates\external_view.html 파일을 더 이상 사용하지 않아도 되어서 
+index.html 파일을 재사용하여서 기존 UI/UX를 최대한 살리고 스케줄러, PDF, Excel에 대한 관련 버튼만 생성하여 페이지에 생성해둠.
+따라서, 관련 api 호출 함수들에 대해서 일부를 주석 처리된 상태입니다. 
+
+### 프로젝트 설정
+- Backend
+ㄴ Python 3.13.9
+ㄴ Flask
+ㄴ Flask-Login
+ㄴ SQLAlchemy
+ㄴ APScheduler (Cron 자동화)
+ㄴ NotebookLM API 연동
+ㄴ Selenium / BeautifulSoup (Togle 크롤링)
+
+- Frontend
+ㄴ HTML / CSS / JS
+ㄴ jQuery or fetch API
+
+- Infra
+ㄴ Windows/Linux server
+ㄴ virtualenv
+ㄴ cron 
 
 
