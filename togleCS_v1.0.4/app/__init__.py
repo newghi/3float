@@ -510,15 +510,15 @@ def start_scheduler(app):
         misfire_grace_time=300
     )
 
-    # 1시간마다 스케줄 실행
-    scheduler.add_job(
-        scheduled_task,
-        trigger="interval",
-        minutes=30,
-        id="hourly_unanswered_collection",
-        replace_existing=True,
-        misfire_grace_time=300
-    )
+    # # 1시간마다 스케줄 실행
+    # scheduler.add_job(
+    #     scheduled_task,
+    #     trigger="interval",
+    #     minutes=30,
+    #     id="hourly_unanswered_collection",
+    #     replace_existing=True,
+    #     misfire_grace_time=300
+    # )
 
     # # 테스트용 10초 후 실행
     # scheduler.add_job(
