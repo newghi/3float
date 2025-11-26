@@ -629,7 +629,7 @@ def create_app(init_scheduler=True):
 
     # Flask-Login 초기화
     login_manager.init_app(app)
-    login_manager.login_view = "auth.login"
+    login_manager.login_view = "auth_bp.login"
     logger.info("✅ Flask-Login 초기화 완료")
 
     # 블락된 IP 로드

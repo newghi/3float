@@ -18,7 +18,7 @@ LOG_DIR = os.path.join(BASE_DIR, "logs")
 IP_BLOCK_FILE = os.path.join(LOG_DIR, "ip_blocks.txt")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-auth_bp = Blueprint("auth", __name__, template_folder="../templates")
+auth_bp = Blueprint("auth_bp", __name__)
 
 def log_permanent_ban(ip):
     now_str = datetime.now().strftime("%Y.%m.%d %H:%M:%S")
@@ -81,7 +81,7 @@ def login():
             ip_obj = ipaddress.ip_address(ip)
             if not ip_obj.is_private:
                 # 사설망이 아닌 경우
-                return redirect(url_for("togle.external_view"))
+                return redirect(url_for("index.index"))
             else:
                 # 사설망이면 기본 페이지
                 return redirect(url_for("index.index"))
@@ -97,4 +97,4 @@ def login():
 def logout():
     logout_user()
     flash("로그아웃 되었습니다.", "info")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for("auth_bp.login"))
