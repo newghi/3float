@@ -1,0 +1,7 @@
+diff a/togleCS_v1.0.4/ReadMe b/togleCS_v1.0.4/ReadMe	(rejected hunks)
+@@ -158,3 +158,5 @@
+ ㄴ Windows 작업 스케줄러: 
+ 1. GoogleUpdater - 사용 안 함  # 크롬 드라이버와 내부 라이브러리에 관한 오류에 따른 버전 제한
+ 2. python togle CS - 준비  # 미니PC 서버가 24시간 가동중이면 프로젝트의 플라스크(flask)를 항상 동작하게 만들도록 작업중이었으나 구현되지않았음
++
++## flask session secret key = "12345"
