@@ -41,26 +41,26 @@ def index():
 #     # 외부 페이지인 external_view.html을 내부에서도 접근할 수 있도록 함
 #     return render_template('external_view.html', user=current_user)
 
-# # 프롬프트 편집 페이지
-# @index_bp.route('/edit_prompt', methods=['GET'])
-# def edit_prompt():
-#     # ✅ base_dir 계산
-#     base_dir = get_data_dir()
+# 프롬프트 편집 페이지
+@index_bp.route('/edit_prompt', methods=['GET'])
+def edit_prompt():
+    # ✅ base_dir 계산
+    base_dir = get_data_dir()
 
-#     # ✅ app/data/prompt.txt 경로
-#     prompt_path = os.path.join(base_dir, "app", "data", "prompt.txt")
-#     print("💾 프롬프트 불러오는 경로:", prompt_path)
+    # ✅ app/data/prompt.txt 경로
+    prompt_path = os.path.join(base_dir, "app", "data", "prompt.txt")
+    print("💾 프롬프트 불러오는 경로:", prompt_path)
 
-#     # 파일 없으면 빈 파일 생성
-#     if not os.path.exists(prompt_path):
-#         with open(prompt_path, 'w', encoding='utf-8') as f:
-#             f.write("")
+    # 파일 없으면 빈 파일 생성
+    if not os.path.exists(prompt_path):
+        with open(prompt_path, 'w', encoding='utf-8') as f:
+            f.write("")
 
-#     # 프롬프트 불러오기 (있는 그대로)
-#     with open(prompt_path, 'r', encoding='utf-8') as f:
-#         prompt = f.read()
+    # 프롬프트 불러오기 (있는 그대로)
+    with open(prompt_path, 'r', encoding='utf-8') as f:
+        prompt = f.read()
 
-#     return render_template('edit_prompt.html', prompt_text=prompt)
+    return render_template('edit_prompt.html', prompt_text=prompt)
 
 # # 프롬프트 저장
 # @index_bp.route('/save_prompt', methods=['POST'])
