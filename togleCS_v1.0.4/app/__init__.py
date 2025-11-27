@@ -140,7 +140,7 @@ def kill_all_chrome():
 
     print("🧹 모든 Chrome / ChromeDriver 프로세스 종료 완료")
 
-from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update, inquiries_crawling
+from app.services.togleService import get_unanswered_list2, get_notebookAnswer, notebookLM_update, inquiries_crawling2
 from app.utils.paths import get_data_dir
 from app.services.fileService import append_unique_to_excel, excel_to_pdf
 from app.models import save_unanswered_to_db
@@ -156,7 +156,7 @@ def auto_open_togle_prompt(app):
 
             # 2. 크롤링: 답변 완료된 미답변 데이터를 필터링
             update_progress("collect", "📥 답변 완료된 문의글을 수집하고 있습니다...", "in_progress")
-            result_list = inquiries_crawling(driver)
+            result_list = inquiries_crawling2(driver)
 
             # 답변 완료된 데이터만 필터링
             answered_data = [item for item in result_list if item['q_answered']]

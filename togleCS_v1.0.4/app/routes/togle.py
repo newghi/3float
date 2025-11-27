@@ -8,7 +8,7 @@ import queue
 
 from app.services.togleService import (
     updateTogleData, append_category_id, notebookLM_update, get_unanswered_list,
-    get_notebookAnswer, upload_togle_answer, updateTogleDataSchduler
+    get_notebookAnswer, upload_togle_answer
 )
 from app.services.fileService import append_unique_to_excel, excel_to_pdf
 from app.utils.paths import get_data_dir
@@ -449,112 +449,112 @@ def post_unanswered():
 #             except Exception as e:
 #                 print(f"❌ 드라이버 종료 오류: {e}")
 
-def togle_all_update_internal(formData, driver=None):
-    """전체 문의 내역 업데이트"""
-    import os
-    print(f"🗒️ 내부 호출 formData: {formData}")
+# def togle_all_update_internal(formData, driver=None):
+#     """전체 문의 내역 업데이트"""
+#     import os
+#     print(f"🗒️ 내부 호출 formData: {formData}")
     
-    # ✅ driver가 없으면 새로 생성
-    driver_created = False
-    if driver is None:
-        from app.drivers.chromedriver import set_chromedriver
-        driver = set_chromedriver()
-        driver_created = True
-        print("✅ 새로운 크롬 드라이버 생성")
+#     # ✅ driver가 없으면 새로 생성
+#     driver_created = False
+#     if driver is None:
+#         from app.drivers.chromedriver import set_chromedriver
+#         driver = set_chromedriver()
+#         driver_created = True
+#         print("✅ 새로운 크롬 드라이버 생성")
     
-    try:
-        # 1. 데이터 수집
-        send_progress("data_collect", "📋 문의 내역 데이터를 수집하고 있습니다...", "in_progress")
-        update_list = updateTogleDataSchduler(formData, driver)
-        send_progress("data_collect", f"✅ {len(update_list)}개 데이터 수집 완료", "completed")
+#     try:
+#         # 1. 데이터 수집
+#         send_progress("data_collect", "📋 문의 내역 데이터를 수집하고 있습니다...", "in_progress")
+#         update_list = updateTogleDataSchduler(formData, driver)
+#         send_progress("data_collect", f"✅ {len(update_list)}개 데이터 수집 완료", "completed")
         
-        base_dir = get_data_dir()
-        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
-        pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
-        base_dir = get_data_dir()
-        print("💾 실제 base_dir:", base_dir)
+#         base_dir = get_data_dir()
+#         excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+#         pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+#         base_dir = get_data_dir()
+#         print("💾 실제 base_dir:", base_dir)
 
-        excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
-        pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
+#         excel_path = os.path.join(base_dir, "app", "data", "togle_data.xlsx")
+#         pdf_path   = os.path.join(base_dir, "app", "data", "togle_data.pdf")
 
-        print("📄 Excel 경로:", excel_path)
-        print("📄 PDF 경로:", pdf_path)
+#         print("📄 Excel 경로:", excel_path)
+#         print("📄 PDF 경로:", pdf_path)
 
-        # 2. 엑셀 파일 업데이트
-        send_progress("excel_update", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
-        append_unique_to_excel(
-            data_list=update_list,
-            filename="togle_data.xlsx",
-            filepath=excel_path,
-            col_mapping={
-                "q_shopping_mall": "쇼핑몰",
-                "q_type": "유형",
-                "q_date": "문의일",
-                "q_answered": "답변여부",
-                "q_writer": "작성자",
-                "q_question": "문의내용",
-                "q_answer": "답변"
-            },
-            sheetname="전체",
-            key_fields=["q_date"],
-            sort_by="q_date"
-        )
-        send_progress("excel_update", "✅ 엑셀 파일 업데이트 완료", "completed")
+#         # 2. 엑셀 파일 업데이트
+#         send_progress("excel_update", "📝 엑셀 파일에 데이터를 작성하고 있습니다...", "in_progress")
+#         append_unique_to_excel(
+#             data_list=update_list,
+#             filename="togle_data.xlsx",
+#             filepath=excel_path,
+#             col_mapping={
+#                 "q_shopping_mall": "쇼핑몰",
+#                 "q_type": "유형",
+#                 "q_date": "문의일",
+#                 "q_answered": "답변여부",
+#                 "q_writer": "작성자",
+#                 "q_question": "문의내용",
+#                 "q_answer": "답변"
+#             },
+#             sheetname="전체",
+#             key_fields=["q_date"],
+#             sort_by="q_date"
+#         )
+#         send_progress("excel_update", "✅ 엑셀 파일 업데이트 완료", "completed")
 
-        # 3. PDF 변환
-        send_progress("pdf_convert", "📄 PDF 파일을 생성하고 있습니다...", "in_progress")
-        excel_to_pdf(
-            filepath=excel_path,
-            output_path=pdf_path,
-            source_sheet="전체",
-            columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
-            small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
-            big_headers=("문의내용","답변"),
-            orientation="landscape",
-            repeat_header=True
-        )
-        send_progress("pdf_convert", "✅ PDF 파일 생성 완료", "completed")
+#         # 3. PDF 변환
+#         send_progress("pdf_convert", "📄 PDF 파일을 생성하고 있습니다...", "in_progress")
+#         excel_to_pdf(
+#             filepath=excel_path,
+#             output_path=pdf_path,
+#             source_sheet="전체",
+#             columns_order=["쇼핑몰","유형","문의일","답변여부","작성자","문의내용","답변"],
+#             small_headers=["쇼핑몰","유형","문의일","답변여부","작성자"],
+#             big_headers=("문의내용","답변"),
+#             orientation="landscape",
+#             repeat_header=True
+#         )
+#         send_progress("pdf_convert", "✅ PDF 파일 생성 완료", "completed")
 
-        # 4. 노트북LM 업데이트
-        send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
-        notebookLM_update(filepath=pdf_path)
-        send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
+#         # 4. 노트북LM 업데이트
+#         send_progress("notebooklm", "📚 노트북LM을 업데이트하고 있습니다...", "in_progress")
+#         notebookLM_update(filepath=pdf_path)
+#         send_progress("notebooklm", "✅ 노트북LM 업데이트 완료", "completed")
         
-        print("✅ togle_all_update_internal 완료")
+#         print("✅ togle_all_update_internal 완료")
         
-    except Exception as e:
-        print(f"❌ togle_all_update_internal 오류: {e}")
-        import traceback
-        traceback.print_exc()
-        send_progress("update_error", f"❌ 업데이트 중 오류: {str(e)}", "error")
-        raise
-    finally:
-        # ✅ 이 함수에서 driver를 생성했다면 종료
-        if driver_created and driver:
-            try:
-                driver.quit()
-                print("✅ 크롬 드라이버 종료 (togle_all_update_internal)")
-            except Exception as e:
-                print(f"❌ 드라이버 종료 오류: {e}")
+#     except Exception as e:
+#         print(f"❌ togle_all_update_internal 오류: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         send_progress("update_error", f"❌ 업데이트 중 오류: {str(e)}", "error")
+#         raise
+#     finally:
+#         # ✅ 이 함수에서 driver를 생성했다면 종료
+#         if driver_created and driver:
+#             try:
+#                 driver.quit()
+#                 print("✅ 크롬 드라이버 종료 (togle_all_update_internal)")
+#             except Exception as e:
+#                 print(f"❌ 드라이버 종료 오류: {e}")
 
-@togle_bp.route('/api/scheduler/progress')
-def scheduler_progress():
-    """실시간 진행 상황을 SSE로 전송"""
-    def generate():
-        while True:
-            try:
-                # 큐에서 진행 상황 가져오기 (타임아웃 30초)
-                progress = progress_queue.get(timeout=30)
-                yield f"data: {jsonify(progress).get_data(as_text=True)}\n\n"
+# @togle_bp.route('/api/scheduler/progress')
+# def scheduler_progress():
+#     """실시간 진행 상황을 SSE로 전송"""
+#     def generate():
+#         while True:
+#             try:
+#                 # 큐에서 진행 상황 가져오기 (타임아웃 30초)
+#                 progress = progress_queue.get(timeout=30)
+#                 yield f"data: {jsonify(progress).get_data(as_text=True)}\n\n"
                 
-                # 완료 또는 에러 시 종료
-                if progress['status'] in ['completed', 'error'] and progress['step'] == 'complete':
-                    break
-            except queue.Empty:
-                # 타임아웃 시 keep-alive 전송
-                yield f"data: {jsonify({'status': 'heartbeat'}).get_data(as_text=True)}\n\n"
+#                 # 완료 또는 에러 시 종료
+#                 if progress['status'] in ['completed', 'error'] and progress['step'] == 'complete':
+#                     break
+#             except queue.Empty:
+#                 # 타임아웃 시 keep-alive 전송
+#                 yield f"data: {jsonify({'status': 'heartbeat'}).get_data(as_text=True)}\n\n"
     
-    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+#     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 # # 현재 진행 상황 조회 엔드포인트
 # @togle_bp.route('/api/scheduler/status')

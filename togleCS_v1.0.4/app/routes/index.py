@@ -62,34 +62,34 @@ def edit_prompt():
 
     return render_template('edit_prompt.html', prompt_text=prompt)
 
-# # 프롬프트 저장
-# @index_bp.route('/save_prompt', methods=['POST'])
-# def save_prompt():
-#     new_prompt = request.form.get('prompt_text', '')
+# 프롬프트 저장
+@index_bp.route('/save_prompt', methods=['POST'])
+def save_prompt():
+    new_prompt = request.form.get('prompt_text', '')
 
-#     # ✅ 불필요한 빈 줄 제거
-#     lines = new_prompt.splitlines()
-#     cleaned = '\n'.join([line.rstrip() for line in lines if line.strip() != ''])
+    # ✅ 불필요한 빈 줄 제거
+    lines = new_prompt.splitlines()
+    cleaned = '\n'.join([line.rstrip() for line in lines if line.strip() != ''])
 
-#     # ✅ 실행 환경에 따라 base_dir 설정
-#     if getattr(sys, 'frozen', False):
-#         # PyInstaller로 실행된 경우 (run.exe)
-#         base_dir = os.path.dirname(sys.executable)
-#     else:
-#         # 개발용 run.py로 실행 중
-#         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    # ✅ 실행 환경에 따라 base_dir 설정
+    if getattr(sys, 'frozen', False):
+        # PyInstaller로 실행된 경우 (run.exe)
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # 개발용 run.py로 실행 중
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-#     # data/prompt.txt 경로 구성 (base_dir 기준으로 상위 ../data)
-#     prompt_path = os.path.abspath(os.path.join(base_dir, "app", "data", "prompt.txt"))
+    # data/prompt.txt 경로 구성 (base_dir 기준으로 상위 ../data)
+    prompt_path = os.path.abspath(os.path.join(base_dir, "app", "data", "prompt.txt"))
 
-#     print("💾 프롬프트 저장 경로:", prompt_path)
+    print("💾 프롬프트 저장 경로:", prompt_path)
 
-#     # 저장
-#     with open(prompt_path, 'w', encoding='utf-8') as f:
-#         f.write(cleaned)
+    # 저장
+    with open(prompt_path, 'w', encoding='utf-8') as f:
+        f.write(cleaned)
 
-#     flash("✅ 프롬프트가 저장되었습니다.")
-#     return redirect(url_for('index.edit_prompt'))
+    flash("✅ 프롬프트가 저장되었습니다.")
+    return redirect(url_for('index.edit_prompt'))
 
 
 # 종료버튼 클릭시
