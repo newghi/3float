@@ -172,7 +172,7 @@ def notebookLM_login(driver):
     search_element(driver, By.XPATH, "//input[@aria-label='이메일 또는 휴대전화']", "input", "egenauto1808@gmail.com")
     search_element(driver, By.XPATH, "//span[normalize-space(text())='다음']", "click")
     print("✅ 구글 아이디 입력 완료.")
-    search_element(driver, By.XPATH, "//input[@aria-label='비밀번호 입력']", "input", "ea!46941808")
+    search_element(driver, By.XPATH, "//input[@aria-label='비밀번호 입력']", "input", "eg46941808!")
     search_element(driver, By.XPATH, "//span[normalize-space(text())='다음']", "click")
     print("✅ 구글 비밀번호 입력 완료.")
 
