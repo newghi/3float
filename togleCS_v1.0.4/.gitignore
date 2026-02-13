@@ -64,3 +64,8 @@ togleCS_v1.0.4 실행파일
 build/
 dist/
 *.spec
+
+# env 파일
+.env 
+./env
+env
