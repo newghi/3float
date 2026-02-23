@@ -74,6 +74,30 @@ def login():
         login_user(user, remember=True)
         info["count"] = 0
         info["blocked_until"] = None
+
+        # =========================
+        # 로그인 성공 로그 기록
+        # =========================
+        now = datetime.now()
+        year_month = now.strftime("%Y.%m")  # 2025.11
+        log_file_path = os.path.join(LOG_DIR, f"{year_month}.txt")
+
+        # 프록시 대응 IP
+        real_ip = request.headers.get("X-Forwarded-For", ip)
+
+        log_entry = (
+            f"{now.strftime('%Y.%m.%d %H:%M:%S')} - "
+            f"LOGIN SUCCESS - "
+            f"{real_ip} - "
+            f"{user.username}\n"
+        )
+
+        try:
+            with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"❌ 로그인 로그 기록 실패: {e}")
+            
         flash(f"환영합니다, {user.username}님!", "success")
 
         # 🔹 사설망 여부 체크

@@ -10,6 +10,7 @@ import logging
 import atexit
 import uuid
 import os
+from dotenv import load_dotenv
 
 # ✅ db는 models에서 import
 from app.models import db
@@ -520,14 +521,14 @@ def start_scheduler(app):
     #     misfire_grace_time=300
     # )
 
-    # # 테스트용 10초 후 실행
-    # scheduler.add_job(
-    #     scheduled_task,
-    #     trigger="date",
-    #     run_date=datetime.now() + timedelta(seconds=10),
-    #     id="test_collection_once",
-    #     replace_existing=True,
-    # )
+    # 테스트용 10초 후 실행
+    scheduler.add_job(
+        scheduled_task,
+        trigger="date",
+        run_date=datetime.now() + timedelta(seconds=10),
+        id="test_collection_once",
+        replace_existing=True,
+    )
 
 
     # # 자동으로 all_update 함수 호출 (매주 월요일 9시)
@@ -595,8 +596,11 @@ def update_status_after_task():
 # ==========================
 def create_app(init_scheduler=True):
     """Flask 앱 생성 및 초기화"""
+    
+    load_dotenv()
+
     app = Flask(__name__)
-    app.secret_key = "12345"
+    app.secret_key = os.getenv("SECRET_KEY", "12345")
 
     print("=" * 60)
     print("🚀 Flask 앱 생성 시작...")
@@ -616,6 +620,10 @@ def create_app(init_scheduler=True):
     # Config 등록
     app.config.from_object(config)
     logger.info("✅ Config 등록 완료")
+
+    # ✅ SERVER_URL 등록
+    app.config["SERVER_URL"] = os.getenv("SERVER_URL")
+
 
     # CORS 설정
     CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
