@@ -11,6 +11,7 @@ import atexit
 import uuid
 import os
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 
 # ✅ db는 models에서 import
 from app.models import db
@@ -629,11 +630,27 @@ def create_app(init_scheduler=True):
     CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
     logger.info("✅ CORS 설정 완료")
 
-    # DB 설정
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://postgres:1111@localhost:5432/togle_db'
+    # DB 설정 (.env 기반)
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    DB_NAME = os.getenv("DB_NAME")
+
+    # NOTE: URL.create handles special characters safely (e.g., non-ASCII in passwords)
+    app.config["SQLALCHEMY_DATABASE_URI"] = URL.create(
+        "postgresql+psycopg2",
+        username=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+    )
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
     db.init_app(app)
-    logger.info("✅ SQLAlchemy DB 설정 완료")
+    logger.info(f"✅ SQLAlchemy DB 연결: {DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
     # Flask-Login 초기화
     login_manager.init_app(app)
