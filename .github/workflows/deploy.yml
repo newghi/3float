@@ -7,6 +7,7 @@ on:
 
 jobs:
   deploy:
+    environment: 3float_actions
     runs-on: ubuntu-latest
 
     steps:
